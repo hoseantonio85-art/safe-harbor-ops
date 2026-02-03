@@ -1,14 +1,24 @@
-import { useState } from 'react';
-import { Filter, Plus, Check } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Filter, Plus, Pencil, Save, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/risks/MetricCard';
-import { RiskTable } from '@/components/risks/RiskTable';
+import { RiskCard } from '@/components/risks/RiskCard';
 import { CreateRiskForm } from '@/components/risks/CreateRiskForm';
 import { RiskDetailView } from '@/components/risks/RiskDetailView';
 import { Badge } from '@/components/ui/badge';
-import { mockRisks, summaryMetrics } from '@/data/mockRisks';
+import { mockRisks } from '@/data/mockRisks';
 import { Risk } from '@/types/risk';
+
+type ScreenMode = 'view' | 'edit' | 'draft';
+
+interface DraftLimits {
+  [riskId: string]: {
+    cleanOpRisk: number;
+    creditOpRisk: number;
+    indirectLosses: number;
+  };
+}
 
 const Index = () => {
   const [risks, setRisks] = useState<Risk[]>(mockRisks);
@@ -18,9 +28,60 @@ const Index = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
   
-  // Manage mode
-  const [isManageMode, setIsManageMode] = useState(false);
-  const [selectedRiskIds, setSelectedRiskIds] = useState<string[]>([]);
+  // Screen mode state
+  const [screenMode, setScreenMode] = useState<ScreenMode>('view');
+  const [draftLimits, setDraftLimits] = useState<DraftLimits>({});
+  const [savedDraftLimits, setSavedDraftLimits] = useState<DraftLimits>({});
+
+  // Calculate aggregates based on current mode
+  const aggregates = useMemo(() => {
+    const limitsToUse = screenMode === 'draft' ? savedDraftLimits : 
+                        screenMode === 'edit' ? draftLimits : {};
+
+    let cleanOpTotal = 0;
+    let cleanOpLimit = 0;
+    let creditOpTotal = 0;
+    let creditOpLimit = 0;
+    let indirectTotal = 0;
+    let indirectLimit = 0;
+    let potentialTotal = 0;
+
+    risks.forEach(risk => {
+      const draft = limitsToUse[risk.id];
+      
+      cleanOpTotal += risk.cleanOpRisk.value || 0;
+      cleanOpLimit += draft?.cleanOpRisk ?? (risk.cleanOpRisk.limit || 0);
+      
+      creditOpTotal += risk.creditOpRisk.value || 0;
+      creditOpLimit += draft?.creditOpRisk ?? (risk.creditOpRisk.limit || 0);
+      
+      indirectTotal += risk.indirectLosses.value || 0;
+      indirectLimit += draft?.indirectLosses ?? (risk.indirectLosses.limit || 0);
+      
+      potentialTotal += risk.potentialLosses || 0;
+    });
+
+    return {
+      cleanOpRisk: {
+        total: cleanOpTotal,
+        limit: cleanOpLimit,
+        utilization: cleanOpLimit > 0 ? Math.round((cleanOpTotal / cleanOpLimit) * 100) : 0
+      },
+      creditOpRisk: {
+        total: creditOpTotal,
+        limit: creditOpLimit,
+        utilization: creditOpLimit > 0 ? Math.round((creditOpTotal / creditOpLimit) * 100) : 0
+      },
+      indirectLosses: {
+        total: indirectTotal,
+        limit: indirectLimit,
+        utilization: indirectLimit > 0 ? Math.round((indirectTotal / indirectLimit) * 100) : 0
+      },
+      potentialLosses: {
+        total: potentialTotal
+      }
+    };
+  }, [risks, screenMode, draftLimits, savedDraftLimits]);
 
   const handleRiskClick = (risk: Risk) => {
     setSelectedRisk(risk);
@@ -69,65 +130,91 @@ const Index = () => {
     setEditingRisk(null);
   };
 
-  const handleSelectRisk = (riskId: string) => {
-    setSelectedRiskIds(prev => 
-      prev.includes(riskId) 
-        ? prev.filter(id => id !== riskId)
-        : [...prev, riskId]
-    );
+  const handleLimitChange = (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses', value: number) => {
+    setDraftLimits(prev => ({
+      ...prev,
+      [riskId]: {
+        cleanOpRisk: prev[riskId]?.cleanOpRisk ?? (risks.find(r => r.id === riskId)?.cleanOpRisk.limit || 0),
+        creditOpRisk: prev[riskId]?.creditOpRisk ?? (risks.find(r => r.id === riskId)?.creditOpRisk.limit || 0),
+        indirectLosses: prev[riskId]?.indirectLosses ?? (risks.find(r => r.id === riskId)?.indirectLosses.limit || 0),
+        [field]: value
+      }
+    }));
   };
 
-  const handleToggleManageMode = () => {
-    if (isManageMode) {
-      setSelectedRiskIds([]);
-    }
-    setIsManageMode(!isManageMode);
+  const handleStartEdit = () => {
+    // Initialize draft with current or saved values
+    const initialDraft: DraftLimits = {};
+    risks.forEach(risk => {
+      initialDraft[risk.id] = savedDraftLimits[risk.id] || {
+        cleanOpRisk: risk.cleanOpRisk.limit || 0,
+        creditOpRisk: risk.creditOpRisk.limit || 0,
+        indirectLosses: risk.indirectLosses.limit || 0
+      };
+    });
+    setDraftLimits(initialDraft);
+    setScreenMode('edit');
+  };
+
+  const handleSaveDraft = () => {
+    setSavedDraftLimits(draftLimits);
+    setScreenMode('draft');
+  };
+
+  const handleCancelEdit = () => {
+    setDraftLimits({});
+    setScreenMode(Object.keys(savedDraftLimits).length > 0 ? 'draft' : 'view');
+  };
+
+  const handleDiscardDraft = () => {
+    setSavedDraftLimits({});
+    setDraftLimits({});
+    setScreenMode('view');
   };
 
   const handleSendForApproval = () => {
-    // Update selected risks status
-    setRisks(risks.map(r => 
-      selectedRiskIds.includes(r.id) 
-        ? { ...r, status: 'На согласовании' as const }
-        : r
-    ));
-    setSelectedRiskIds([]);
-    setIsManageMode(false);
-  };
-
-  const handleCancelChanges = () => {
-    setSelectedRiskIds([]);
-    setIsManageMode(false);
-  };
-
-  // Calculate new limits when in manage mode
-  const getNewLimits = () => {
-    const selected = risks.filter(r => selectedRiskIds.includes(r.id));
-    return {
-      cleanOp: {
-        current: 149,
-        new: 175,
-        diff: 26
-      },
-      creditOp: {
-        current: 420,
-        new: 400,
-        diff: -20
-      },
-      indirect: {
-        current: 54,
-        new: 60,
-        diff: 6
-      },
-      potential: {
-        current: 1250,
-        new: 1500,
-        diff: 250
+    // Apply draft limits to risks and change status
+    const changedRiskIds = Object.keys(savedDraftLimits);
+    setRisks(risks.map(r => {
+      if (changedRiskIds.includes(r.id)) {
+        return {
+          ...r,
+          status: 'На согласовании' as const,
+          cleanOpRisk: { ...r.cleanOpRisk, limit: savedDraftLimits[r.id].cleanOpRisk },
+          creditOpRisk: { ...r.creditOpRisk, limit: savedDraftLimits[r.id].creditOpRisk },
+          indirectLosses: { ...r.indirectLosses, limit: savedDraftLimits[r.id].indirectLosses }
+        };
       }
-    };
+      return r;
+    }));
+    setSavedDraftLimits({});
+    setDraftLimits({});
+    setScreenMode('view');
   };
 
-  const newLimits = getNewLimits();
+  const changedRisksCount = Object.keys(
+    screenMode === 'draft' ? savedDraftLimits : draftLimits
+  ).filter(id => {
+    const risk = risks.find(r => r.id === id);
+    const draft = screenMode === 'draft' ? savedDraftLimits[id] : draftLimits[id];
+    if (!risk || !draft) return false;
+    return (
+      draft.cleanOpRisk !== (risk.cleanOpRisk.limit || 0) ||
+      draft.creditOpRisk !== (risk.creditOpRisk.limit || 0) ||
+      draft.indirectLosses !== (risk.indirectLosses.limit || 0)
+    );
+  }).length;
+
+  const getModeLabel = () => {
+    switch (screenMode) {
+      case 'edit':
+        return 'Редактирование лимитов';
+      case 'draft':
+        return 'Черновик изменений';
+      default:
+        return null;
+    }
+  };
 
   return (
     <MainLayout>
@@ -141,6 +228,19 @@ const Index = () => {
               </span>
               Задачи
             </Badge>
+            {getModeLabel() && (
+              <Badge 
+                variant={screenMode === 'edit' ? 'default' : 'secondary'} 
+                className="gap-1.5 px-3 py-1.5 text-sm"
+              >
+                {getModeLabel()}
+                {changedRisksCount > 0 && (
+                  <span className="ml-1 text-xs opacity-80">
+                    ({changedRisksCount} изм.)
+                  </span>
+                )}
+              </Badge>
+            )}
           </div>
           
           <div className="flex items-center gap-3">
@@ -149,128 +249,103 @@ const Index = () => {
             </Button>
             <Button variant="outline">Подразделение</Button>
             <Button variant="outline">Период — 2026</Button>
-            {!isManageMode ? (
-              <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Создать риск
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleSendForApproval}
-                disabled={selectedRiskIds.length === 0}
-                className="gap-2"
-              >
-                Отправить на согласование
-              </Button>
+            
+            {screenMode === 'view' && (
+              <>
+                <Button variant="outline" onClick={handleStartEdit} className="gap-2">
+                  <Pencil className="w-4 h-4" />
+                  Редактировать
+                </Button>
+                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Создать риск
+                </Button>
+              </>
+            )}
+
+            {screenMode === 'edit' && (
+              <>
+                <Button variant="outline" onClick={handleCancelEdit} className="gap-2">
+                  <X className="w-4 h-4" />
+                  Отмена
+                </Button>
+                <Button onClick={handleSaveDraft} className="gap-2">
+                  <Save className="w-4 h-4" />
+                  Сохранить черновик
+                </Button>
+              </>
+            )}
+
+            {screenMode === 'draft' && (
+              <>
+                <Button variant="outline" onClick={handleDiscardDraft}>
+                  Отменить изменения
+                </Button>
+                <Button variant="outline" onClick={handleStartEdit} className="gap-2">
+                  <Pencil className="w-4 h-4" />
+                  Продолжить редактирование
+                </Button>
+                <Button onClick={handleSendForApproval} className="gap-2">
+                  <Send className="w-4 h-4" />
+                  Отправить на согласование
+                </Button>
+              </>
             )}
           </div>
         </div>
 
         {/* Metric Cards */}
-        {!isManageMode ? (
-          <div className="grid grid-cols-4 gap-4">
-            <MetricCard 
-              title="Чистый операционный риск"
-              value={`${summaryMetrics.cleanOpRisk.total} млн руб.`}
-              subValue={`из ${summaryMetrics.cleanOpRisk.limit} млн руб.`}
-              utilization={summaryMetrics.cleanOpRisk.utilization}
-              color="emerald"
-            />
-            <MetricCard 
-              title="Опрриск в кредитовании"
-              value={`${summaryMetrics.creditOpRisk.total} млн руб.`}
-              subValue={`из ${summaryMetrics.creditOpRisk.limit} млн руб.`}
-              utilization={summaryMetrics.creditOpRisk.utilization}
-              color="cyan"
-            />
-            <MetricCard 
-              title="Косвенные потери"
-              value={`${summaryMetrics.indirectLosses.total} млн руб.`}
-              subValue={`из ${summaryMetrics.indirectLosses.limit} млн руб.`}
-              utilization={summaryMetrics.indirectLosses.utilization}
-              color="yellow"
-            />
-            <MetricCard 
-              title="Потенциальные потери"
-              value={`${summaryMetrics.potentialLosses.total.toLocaleString('ru-RU')} млн руб.`}
-              utilization={0}
-              showDonut={false}
-              color="pink"
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-4">
-            {/* Manage mode metric cards with diffs */}
-            <div className="metric-card bg-accent/50 flex items-center gap-4">
-              <div className="flex-1">
-                <h3 className="text-sm font-medium mb-1">Чистый операционный риск</h3>
-                <p className="text-sm text-muted-foreground">Текущий лимит: {newLimits.cleanOp.current} млн</p>
-                <p className="text-sm">
-                  Новый лимит: {newLimits.cleanOp.new} млн{' '}
-                  <span className="text-primary font-medium">+{newLimits.cleanOp.diff} млн</span>
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Check className="w-5 h-5 text-primary" />
-              </div>
-            </div>
-            <div className="metric-card bg-accent/50 flex items-center gap-4">
-              <div className="flex-1">
-                <h3 className="text-sm font-medium mb-1">Опрриск в кредитовании</h3>
-                <p className="text-sm text-muted-foreground">Текущий лимит: {newLimits.creditOp.current} млн</p>
-                <p className="text-sm">
-                  Новый лимит: {newLimits.creditOp.new} млн{' '}
-                  <span className="text-destructive font-medium">{newLimits.creditOp.diff} млн</span>
-                </p>
-              </div>
-            </div>
-            <div className="metric-card bg-accent/50 flex items-center gap-4">
-              <div className="flex-1">
-                <h3 className="text-sm font-medium mb-1">Косвенные потери</h3>
-                <p className="text-sm text-muted-foreground">Текущий лимит: {newLimits.indirect.current} млн</p>
-                <p className="text-sm">
-                  Новый лимит: {newLimits.indirect.new} млн{' '}
-                  <span className="text-primary font-medium">+{newLimits.indirect.diff} млн</span>
-                </p>
-              </div>
-            </div>
-            <div className="metric-card bg-accent/50 flex items-center gap-4">
-              <div className="flex-1">
-                <h3 className="text-sm font-medium mb-1">Потенциальные потери</h3>
-                <p className="text-sm text-muted-foreground">Текущая оценка: {newLimits.potential.current} млн</p>
-                <p className="text-sm">
-                  Новая оценка: {newLimits.potential.new} млн{' '}
-                  <span className="text-muted-foreground font-medium">+{newLimits.potential.diff} млн</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="grid grid-cols-4 gap-4">
+          <MetricCard 
+            title="Чистый операционный риск"
+            value={`${aggregates.cleanOpRisk.total.toLocaleString('ru-RU')} млн руб.`}
+            subValue={`из ${aggregates.cleanOpRisk.limit.toLocaleString('ru-RU')} млн руб.`}
+            utilization={aggregates.cleanOpRisk.utilization}
+            color="emerald"
+          />
+          <MetricCard 
+            title="Опрриск в кредитовании"
+            value={`${aggregates.creditOpRisk.total.toLocaleString('ru-RU')} млн руб.`}
+            subValue={`из ${aggregates.creditOpRisk.limit.toLocaleString('ru-RU')} млн руб.`}
+            utilization={aggregates.creditOpRisk.utilization}
+            color="cyan"
+          />
+          <MetricCard 
+            title="Косвенные потери"
+            value={`${aggregates.indirectLosses.total.toLocaleString('ru-RU')} млн руб.`}
+            subValue={`из ${aggregates.indirectLosses.limit.toLocaleString('ru-RU')} млн руб.`}
+            utilization={aggregates.indirectLosses.utilization}
+            color="yellow"
+          />
+          <MetricCard 
+            title="Потенциальные потери"
+            value={`${aggregates.potentialLosses.total.toLocaleString('ru-RU')} млн руб.`}
+            utilization={0}
+            showDonut={false}
+            color="pink"
+          />
+        </div>
 
-        {/* Table Header */}
+        {/* List Header */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             Всего рисков {risks.length}
           </span>
-          {!isManageMode ? (
-            <Button variant="outline" onClick={handleToggleManageMode}>
-              Управление рисками
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={handleCancelChanges}>
-              Отменить изменения
-            </Button>
-          )}
         </div>
 
-        {/* Risk Table */}
-        <RiskTable 
-          risks={risks}
-          onRiskClick={handleRiskClick}
-          isManageMode={isManageMode}
-          selectedRisks={selectedRiskIds}
-          onSelectRisk={handleSelectRisk}
-        />
+        {/* Risk Cards List */}
+        <div className="space-y-3">
+          {risks.map((risk) => (
+            <RiskCard
+              key={risk.id}
+              risk={risk}
+              mode={screenMode}
+              draftLimits={screenMode === 'draft' ? savedDraftLimits[risk.id] : draftLimits[risk.id]}
+              onLimitChange={handleLimitChange}
+              onRiskClick={handleRiskClick}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Create Risk Form */}
