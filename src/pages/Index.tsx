@@ -401,7 +401,7 @@ const Index = () => {
         </div>
 
         {/* === FOOTER ZONE: Sticky Workflow Actions (View mode only) === */}
-        {screenMode === 'view' && (pendingChangesCount > 0 || awaitingApprovalCount > 0) && (
+        {screenMode === 'view' && (
           <div className="sticky bottom-0 px-6 py-4 border-t border-border bg-card/95 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
@@ -418,17 +418,21 @@ const Index = () => {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {awaitingApprovalCount > 0 && (
-                  <Button variant="outline" onClick={handleReturnForRevision} className="gap-2">
-                    Вернуть на доработку
-                  </Button>
-                )}
-                {pendingChangesCount > 0 && (
-                  <Button onClick={handleSendForApproval} className="gap-2">
-                    <Send className="w-4 h-4" />
-                    Отправить на согласование
-                  </Button>
-                )}
+                <Button 
+                  variant="secondary" 
+                  onClick={handleReturnForRevision} 
+                  disabled={awaitingApprovalCount === 0}
+                >
+                  Вернуть на доработку
+                </Button>
+                <Button 
+                  onClick={handleSendForApproval} 
+                  disabled={pendingChangesCount === 0}
+                  className="gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Отправить на согласование
+                </Button>
               </div>
             </div>
           </div>
