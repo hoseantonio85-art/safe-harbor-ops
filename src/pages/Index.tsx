@@ -25,6 +25,7 @@ interface DraftLimits {
     cleanOpRisk: number;
     creditOpRisk: number;
     indirectLosses: number;
+    potentialLosses: number;
   };
 }
 
@@ -172,13 +173,15 @@ const Index = () => {
     setScreenMode('view');
   };
 
-  const handleLimitChange = (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses', value: number) => {
+  const handleLimitChange = (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses' | 'potentialLosses', value: number) => {
+    const risk = risks.find(r => r.id === riskId);
     setDraftLimits(prev => ({
       ...prev,
       [riskId]: {
-        cleanOpRisk: prev[riskId]?.cleanOpRisk ?? (risks.find(r => r.id === riskId)?.cleanOpRisk.limit || 0),
-        creditOpRisk: prev[riskId]?.creditOpRisk ?? (risks.find(r => r.id === riskId)?.creditOpRisk.limit || 0),
-        indirectLosses: prev[riskId]?.indirectLosses ?? (risks.find(r => r.id === riskId)?.indirectLosses.limit || 0),
+        cleanOpRisk: prev[riskId]?.cleanOpRisk ?? (risk?.cleanOpRisk.limit || 0),
+        creditOpRisk: prev[riskId]?.creditOpRisk ?? (risk?.creditOpRisk.limit || 0),
+        indirectLosses: prev[riskId]?.indirectLosses ?? (risk?.indirectLosses.limit || 0),
+        potentialLosses: prev[riskId]?.potentialLosses ?? (risk?.potentialLosses || 0),
         [field]: value
       }
     }));
@@ -191,7 +194,8 @@ const Index = () => {
       initialDraft[risk.id] = pendingChanges[risk.id] || {
         cleanOpRisk: risk.cleanOpRisk.limit || 0,
         creditOpRisk: risk.creditOpRisk.limit || 0,
-        indirectLosses: risk.indirectLosses.limit || 0
+        indirectLosses: risk.indirectLosses.limit || 0,
+        potentialLosses: risk.potentialLosses || 0
       };
     });
     setDraftLimits(initialDraft);
@@ -241,7 +245,8 @@ const Index = () => {
     return (
       pending.cleanOpRisk !== (risk.cleanOpRisk.limit || 0) ||
       pending.creditOpRisk !== (risk.creditOpRisk.limit || 0) ||
-      pending.indirectLosses !== (risk.indirectLosses.limit || 0)
+      pending.indirectLosses !== (risk.indirectLosses.limit || 0) ||
+      pending.potentialLosses !== (risk.potentialLosses || 0)
     );
   }).length;
 

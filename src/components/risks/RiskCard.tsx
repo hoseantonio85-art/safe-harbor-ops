@@ -17,8 +17,9 @@ interface RiskCardProps {
     cleanOpRisk: number;
     creditOpRisk: number;
     indirectLosses: number;
+    potentialLosses: number;
   };
-  onLimitChange?: (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses', value: number) => void;
+  onLimitChange?: (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses' | 'potentialLosses', value: number) => void;
   onRiskClick: (risk: Risk) => void;
 }
 

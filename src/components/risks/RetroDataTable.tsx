@@ -10,13 +10,14 @@ interface RetroDataTableProps {
     cleanOpRisk: number;
     creditOpRisk: number;
     indirectLosses: number;
+    potentialLosses: number;
   };
-  onLimitChange?: (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses', value: number) => void;
+  onLimitChange?: (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses' | 'potentialLosses', value: number) => void;
 }
 
 interface LossRow {
   label: string;
-  field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses';
+  field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses' | 'potentialLosses';
   fact2024?: number;
   fact2025?: number;
   forecast2025?: number;
@@ -54,6 +55,12 @@ export function RetroDataTable({ risk, draftLimits, onLimitChange }: RetroDataTa
       forecast2025: risk.indirectLosses.forecast2025,
       currentLimit: risk.indirectLosses.limit,
       newLimit: draftLimits?.indirectLosses ?? (risk.indirectLosses.limit || 0),
+    },
+    {
+      label: 'Потенциальные потери',
+      field: 'potentialLosses',
+      currentLimit: risk.potentialLosses,
+      newLimit: draftLimits?.potentialLosses ?? (risk.potentialLosses || 0),
     },
   ];
 
