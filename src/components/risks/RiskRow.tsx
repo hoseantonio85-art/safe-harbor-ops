@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Risk } from '@/types/risk';
 import { Input } from '@/components/ui/input';
@@ -79,13 +79,6 @@ function LimitCell({
   );
 }
 
-const statusStyles: Record<string, string> = {
-  'Утверждён': 'bg-status-approved/10 text-status-approved',
-  'В работе': 'bg-status-pending/10 text-status-pending',
-  'На согласовании': 'bg-amber-500/10 text-amber-600',
-  'Черновик': 'bg-status-draft/10 text-status-draft',
-};
-
 export function RiskRow({
   risk,
   mode,
@@ -99,19 +92,14 @@ export function RiskRow({
   const [isOpen, setIsOpen] = useState(false);
   const isEditing = mode === 'edit';
 
-  const hasWarning =
-    risk.cleanOpRisk.utilization > 100 ||
-    risk.creditOpRisk.utilization > 100 ||
-    risk.indirectLosses.utilization > 100;
-
   return (
     <div className={cn(
       "border border-border rounded-lg bg-card",
       isSelected && "ring-2 ring-primary/30 border-primary/30",
     )}>
       {/* Main row */}
-      <div className="grid grid-cols-[minmax(280px,2fr)_minmax(140px,1fr)_repeat(4,minmax(120px,1fr))] items-center gap-0">
-        {/* Col 1: Risk */}
+      <div className="grid grid-cols-[minmax(160px,1fr)_minmax(220px,2fr)_repeat(4,minmax(120px,1fr))] items-center gap-0">
+        {/* Col 1: ID + Status */}
         <div className="flex items-center gap-2 px-3 py-2.5 min-w-0">
           {selectionMode && (
             <Checkbox
@@ -127,23 +115,22 @@ export function RiskRow({
             {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
           </button>
           <span className="text-xs font-medium text-primary shrink-0">{risk.id}</span>
-          <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0", statusStyles[risk.status] || 'bg-muted text-muted-foreground')}>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-border text-muted-foreground shrink-0">
             {risk.status}
           </span>
-          {hasWarning && <AlertTriangle className="w-3.5 h-3.5 text-util-over shrink-0" />}
+        </div>
+
+        {/* Col 2: Name + Block + Subdivision */}
+        <div className="px-3 py-2.5 border-l border-border min-w-0">
           <button
             onClick={() => onRiskClick(risk)}
-            className="text-sm text-foreground hover:text-primary transition-colors text-left truncate min-w-0"
+            className="text-sm text-foreground hover:text-primary transition-colors text-left truncate block w-full"
             title={risk.riskName}
           >
             {risk.riskName}
           </button>
-        </div>
-
-        {/* Col 2: Context */}
-        <div className="px-3 py-2.5 border-l border-border">
-          <div className="text-xs text-muted-foreground truncate">{risk.block}</div>
-          <div className="text-xs font-medium text-foreground truncate">{risk.subdivision}</div>
+          <div className="text-xs text-muted-foreground truncate mt-0.5">{risk.block}</div>
+          <div className="text-xs text-muted-foreground truncate">{risk.subdivision}</div>
         </div>
 
         {/* Col 3: Clean OpRisk */}
@@ -190,7 +177,7 @@ export function RiskRow({
         </div>
       </div>
 
-      {/* Accordion: Retro data (read-only context) */}
+      {/* Accordion */}
       {isOpen && (
         <RiskRowAccordion risk={risk} />
       )}

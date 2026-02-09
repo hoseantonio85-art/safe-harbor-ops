@@ -285,28 +285,24 @@ const Index = () => {
                 value={`${aggregates.cleanOpRisk.total.toLocaleString('ru-RU')} млн руб.`}
                 subValue={`из ${aggregates.cleanOpRisk.limit.toLocaleString('ru-RU')} млн руб.`}
                 utilization={aggregates.cleanOpRisk.utilization}
-                color="emerald"
               />
               <MetricCard
-                title="Опрриск в кредитовании"
+                title="Оперриск в кредитовании"
                 value={`${aggregates.creditOpRisk.total.toLocaleString('ru-RU')} млн руб.`}
                 subValue={`из ${aggregates.creditOpRisk.limit.toLocaleString('ru-RU')} млн руб.`}
                 utilization={aggregates.creditOpRisk.utilization}
-                color="cyan"
               />
               <MetricCard
                 title="Косвенные потери"
                 value={`${aggregates.indirectLosses.total.toLocaleString('ru-RU')} млн руб.`}
                 subValue={`из ${aggregates.indirectLosses.limit.toLocaleString('ru-RU')} млн руб.`}
                 utilization={aggregates.indirectLosses.utilization}
-                color="yellow"
               />
               <MetricCard
                 title="Потенциальные потери"
                 value={`${aggregates.potentialLosses.total.toLocaleString('ru-RU')} млн руб.`}
                 utilization={0}
                 showDonut={false}
-                color="pink"
               />
             </div>
 
@@ -351,17 +347,7 @@ const Index = () => {
 
               <div className="flex-1" />
 
-              {screenMode === 'view' && (
-                <Button
-                  variant={selectionMode ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={toggleSelectionMode}
-                  className="gap-1.5"
-                >
-                  <CheckSquare className="w-4 h-4" />
-                  {selectionMode ? `Выбрано: ${selectedRiskIds.size}` : 'Выбрать несколько'}
-                </Button>
-              )}
+              {/* Selection button moved to footer */}
 
               <span className="text-sm text-muted-foreground">
                 Показано {filteredRisks.length} из {risks.length}
@@ -397,14 +383,25 @@ const Index = () => {
         {screenMode === 'view' && (
           <div className="sticky bottom-0 px-6 py-4 border-t border-border bg-card/95 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                {pendingChangesCount > 0 && (
-                  <span><span className="font-medium text-foreground">{pendingChangesCount}</span> рисков с изменёнными лимитами</span>
-                )}
-                {pendingChangesCount > 0 && awaitingApprovalCount > 0 && ' • '}
-                {awaitingApprovalCount > 0 && (
-                  <span><span className="font-medium text-foreground">{awaitingApprovalCount}</span> на согласовании</span>
-                )}
+              <div className="flex items-center gap-4">
+                <Button
+                  variant={selectionMode ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={toggleSelectionMode}
+                  className="gap-1.5"
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  {selectionMode ? `Отменить выбор (${selectedRiskIds.size})` : 'Выбрать несколько'}
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  {pendingChangesCount > 0 && (
+                    <span><span className="font-medium text-foreground">{pendingChangesCount}</span> с изменёнными лимитами</span>
+                  )}
+                  {pendingChangesCount > 0 && awaitingApprovalCount > 0 && ' • '}
+                  {awaitingApprovalCount > 0 && (
+                    <span><span className="font-medium text-foreground">{awaitingApprovalCount}</span> на согласовании</span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="secondary" onClick={handleReturnForRevision} disabled={awaitingApprovalCount === 0}>
