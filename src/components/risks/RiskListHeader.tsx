@@ -1,0 +1,12 @@
+export function RiskListHeader() {
+  return (
+    <div className="grid grid-cols-[minmax(280px,2fr)_minmax(140px,1fr)_repeat(4,minmax(120px,1fr))] items-center gap-0 px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-medium text-muted-foreground sticky top-0 z-10">
+      <div>Риск</div>
+      <div className="border-l border-border px-3">Контекст</div>
+      <div className="border-l border-border px-3 text-right">Чистый оперриск</div>
+      <div className="border-l border-border px-3 text-right">Оперриск в кредитовании</div>
+      <div className="border-l border-border px-3 text-right">Косвенные потери</div>
+      <div className="border-l border-border px-3 text-right">Потенциальные потери</div>
+    </div>
+  );
+}
