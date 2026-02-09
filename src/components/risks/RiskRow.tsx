@@ -24,6 +24,21 @@ interface RiskRowProps {
   onToggleSelect?: (riskId: string) => void;
 }
 
+function StatusTag({ status }: { status: Risk['status'] }) {
+  const colorMap: Record<Risk['status'], string> = {
+    'Черновик': 'text-muted-foreground border-muted-foreground/40',
+    'В работе': 'text-foreground border-border',
+    'На согласовании': 'text-orange-500 border-orange-300',
+    'Утверждён': 'text-primary border-primary/40',
+  };
+
+  return (
+    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium border bg-transparent", colorMap[status])}>
+      {status}
+    </span>
+  );
+}
+
 function UtilBadge({ utilization }: { utilization: number }) {
   if (!utilization || utilization === 0) return null;
   
@@ -100,24 +115,24 @@ export function RiskRow({
       {/* Main row */}
       <div className="grid grid-cols-[minmax(160px,1fr)_minmax(220px,2fr)_repeat(4,minmax(120px,1fr))] items-center gap-0">
         {/* Col 1: ID + Status */}
-        <div className="flex items-center gap-2 px-3 py-2.5 min-w-0">
+        <div className="flex items-start gap-2 px-3 py-2.5 min-w-0">
           {selectionMode && (
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => onToggleSelect?.(risk.id)}
-              className="shrink-0"
+              className="shrink-0 mt-0.5"
             />
           )}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="shrink-0 p-0.5 hover:bg-accent rounded transition-colors"
+            className="shrink-0 p-0.5 mt-0.5 hover:bg-accent rounded transition-colors"
           >
             {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
           </button>
-          <span className="text-xs font-medium text-primary shrink-0">{risk.id}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium border border-border text-muted-foreground shrink-0">
-            {risk.status}
-          </span>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="text-xs font-medium text-primary">{risk.id}</span>
+            <StatusTag status={risk.status} />
+          </div>
         </div>
 
         {/* Col 2: Name + Block + Subdivision */}
