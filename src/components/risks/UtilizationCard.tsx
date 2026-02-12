@@ -4,11 +4,10 @@ import { LossLimit } from '@/types/risk';
 interface UtilizationCardProps {
   title: string;
   lossLimit: LossLimit;
-  incidentCount: number;
   onClick: () => void;
 }
 
-export function UtilizationCard({ title, lossLimit, incidentCount, onClick }: UtilizationCardProps) {
+export function UtilizationCard({ title, lossLimit, onClick }: UtilizationCardProps) {
   const { limit = 0, value, utilization } = lossLimit;
   const hasLimit = limit > 0;
   const isOver = utilization > 100;
@@ -17,20 +16,15 @@ export function UtilizationCard({ title, lossLimit, incidentCount, onClick }: Ut
   return (
     <button
       onClick={onClick}
-      className="text-left w-full p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors space-y-3"
+      className="text-left w-full p-5 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors flex flex-col justify-between min-h-[200px]"
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="text-sm font-medium text-foreground">{title}</h4>
-        <span className="text-xs text-primary hover:underline shrink-0">
-          Инциденты: {incidentCount} →
-        </span>
-      </div>
+      {/* Zone 1 — Title */}
+      <h4 className="text-sm font-medium text-foreground">{title}</h4>
 
       {hasLimit ? (
         <>
-          {/* Numbers */}
-          <div className="space-y-1.5">
+          {/* Zone 2 — Values */}
+          <div className="space-y-1.5 mt-3">
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-muted-foreground">Лимит</span>
               <span className="text-sm font-medium">{limit} млн</span>
@@ -56,8 +50,8 @@ export function UtilizationCard({ title, lossLimit, incidentCount, onClick }: Ut
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+          {/* Zone 3 — Progress bar (always at bottom) */}
+          <div className="h-2 w-full rounded-full bg-muted overflow-hidden mt-4">
             <div
               className={cn(
                 "h-full rounded-full transition-all",
@@ -70,7 +64,7 @@ export function UtilizationCard({ title, lossLimit, incidentCount, onClick }: Ut
           </div>
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">Лимит не установлен</p>
+        <p className="text-sm text-muted-foreground mt-3">Лимит не установлен</p>
       )}
     </button>
   );
