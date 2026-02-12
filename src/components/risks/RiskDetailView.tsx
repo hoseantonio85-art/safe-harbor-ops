@@ -63,7 +63,7 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
   return (
     <>
       <FullscreenLightbox isOpen={isOpen} onClose={onClose} title="">
-        <div className="grid grid-cols-[1fr,300px] gap-6">
+        <div className="grid grid-cols-[1fr,320px] gap-8 px-2">
           {/* Main content */}
           <div className="space-y-6">
             {/* Header */}
@@ -139,26 +139,29 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
             {/* Utilization */}
             <section id="utilization" className="space-y-3">
               <h2 className="text-base font-semibold">Утилизация лимитов</h2>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-5">
                 <UtilizationCard
                   title="Чистый операционный риск"
                   lossLimit={risk.cleanOpRisk}
-                  incidentCount={14}
                   onClick={() => setUtilizationOpen(true)}
                 />
                 <UtilizationCard
                   title="Оперриск в кредитовании"
                   lossLimit={risk.creditOpRisk}
-                  incidentCount={3}
                   onClick={() => setUtilizationOpen(true)}
                 />
                 <UtilizationCard
                   title="Косвенные потери"
                   lossLimit={risk.indirectLosses}
-                  incidentCount={5}
                   onClick={() => setUtilizationOpen(true)}
                 />
               </div>
+              <button
+                onClick={() => setUtilizationOpen(true)}
+                className="text-sm text-primary hover:underline transition-colors"
+              >
+                Инциденты: 22 →
+              </button>
             </section>
 
             {/* Scenarios */}
