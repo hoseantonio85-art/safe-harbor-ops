@@ -66,6 +66,11 @@
     --status-approved: 160 84% 39%;
     --status-pending: 45 93% 58%;
     --status-draft: 220 10% 60%;
+
+    /* AI alert */
+    --ai-alert: 270 60% 96%;
+    --ai-alert-foreground: 270 50% 40%;
+    --ai-alert-border: 270 40% 85%;
   }
 
   .dark {
