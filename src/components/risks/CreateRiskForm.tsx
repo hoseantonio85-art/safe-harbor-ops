@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FullscreenLightbox } from '@/components/ui/fullscreen-lightbox';
-import { Risk, Scenario, Mirror } from '@/types/risk';
+import { Risk, Mirror } from '@/types/risk';
+import { cn } from '@/lib/utils';
 
 interface CreateRiskFormProps {
   isOpen: boolean;
@@ -34,66 +35,130 @@ const riskProfiles = [
 const strategies = ['Принять', 'Минимизировать', 'Передать', 'Избежать'];
 const qualitativeLossTypes = ['Нет', 'Репутационные', 'Регуляторные', 'Стратегические'];
 
+interface ScenarioFormData {
+  id: string;
+  description: string;
+  groupScenario: string;
+  cleanOp: number;
+  creditOp: number;
+  indirect: number;
+}
+
 export function CreateRiskForm({ isOpen, onClose, onSave, editRisk }: CreateRiskFormProps) {
   const [process, setProcess] = useState(editRisk?.process || '');
   const [riskProfile, setRiskProfile] = useState(editRisk?.riskProfile || '');
-  const [riskLevel, setRiskLevel] = useState<'Высокий' | 'Средний' | 'Низкий'>(editRisk?.riskLevel || 'Низкий');
   const [strategy, setStrategy] = useState(editRisk?.responseStrategy || '');
   const [qualitativeLosses, setQualitativeLosses] = useState(editRisk?.qualitativeLosses || '');
-  
-  // Risk capacity and limits
-  const [cleanOpRisk, setCleanOpRisk] = useState(editRisk?.cleanOpRisk?.value?.toString() || '0');
-  const [cleanOpProb, setCleanOpProb] = useState('');
-  const [cleanOpLimit, setCleanOpLimit] = useState(editRisk?.cleanOpRisk?.limit?.toString() || '0');
-  
-  const [creditOpRisk, setCreditOpRisk] = useState(editRisk?.creditOpRisk?.value?.toString() || '0');
-  const [creditOpProb, setCreditOpProb] = useState('');
-  const [creditOpLimit, setCreditOpLimit] = useState(editRisk?.creditOpRisk?.limit?.toString() || '0');
-  
-  const [indirectLosses, setIndirectLosses] = useState(editRisk?.indirectLosses?.value?.toString() || '0');
-  const [indirectProb, setIndirectProb] = useState('');
-  const [indirectLimit, setIndirectLimit] = useState(editRisk?.indirectLosses?.limit?.toString() || '0');
 
   // Scenarios
-  const [scenarios, setScenarios] = useState<Scenario[]>(editRisk?.scenarios || []);
-  
+  const [scenarios, setScenarios] = useState<ScenarioFormData[]>(() => {
+    if (editRisk?.scenarios && editRisk.scenarios.length > 0) {
+      return editRisk.scenarios.map(s => ({
+        id: s.id,
+        description: s.description,
+        groupScenario: s.groupScenario,
+        cleanOp: 0,
+        creditOp: 0,
+        indirect: 0,
+      }));
+    }
+    return [{
+      id: Date.now().toString(),
+      description: '',
+      groupScenario: '',
+      cleanOp: 0,
+      creditOp: 0,
+      indirect: 0,
+    }];
+  });
+
+  // Limits
+  const [cleanOpLimit, setCleanOpLimit] = useState(editRisk?.cleanOpRisk?.limit?.toString() || '0');
+  const [creditOpLimit, setCreditOpLimit] = useState(editRisk?.creditOpRisk?.limit?.toString() || '0');
+  const [indirectLimit, setIndirectLimit] = useState(editRisk?.indirectLosses?.limit?.toString() || '0');
+
   // Mirrors
   const [mirrors, setMirrors] = useState<Mirror[]>(editRisk?.mirrors || []);
 
+  // Auto-calculated totals
+  const totals = useMemo(() => {
+    const cleanOp = scenarios.reduce((sum, s) => sum + s.cleanOp, 0);
+    const creditOp = scenarios.reduce((sum, s) => sum + s.creditOp, 0);
+    const indirect = scenarios.reduce((sum, s) => sum + s.indirect, 0);
+    const total = cleanOp + creditOp + indirect;
+    return { cleanOp, creditOp, indirect, total };
+  }, [scenarios]);
+
+  // Auto-calculated scenario percentages
+  const scenarioPercentages = useMemo(() => {
+    const total = totals.total;
+    if (total === 0) return scenarios.map(() => 0);
+    return scenarios.map(s => {
+      const scenarioTotal = s.cleanOp + s.creditOp + s.indirect;
+      return Math.round((scenarioTotal / total) * 100);
+    });
+  }, [scenarios, totals.total]);
+
+  // Auto risk level
+  const calculatedRiskLevel = useMemo((): Risk['riskLevel'] => {
+    if (totals.total > 500) return 'Высокий';
+    if (totals.total > 100) return 'Средний';
+    return 'Низкий';
+  }, [totals.total]);
+
+  // Limit warnings
+  const limitWarnings = useMemo(() => {
+    const cleanLim = parseFloat(cleanOpLimit) || 0;
+    const creditLim = parseFloat(creditOpLimit) || 0;
+    const indirectLim = parseFloat(indirectLimit) || 0;
+    return {
+      cleanOp: cleanLim > 0 && totals.cleanOp > cleanLim,
+      creditOp: creditLim > 0 && totals.creditOp > creditLim,
+      indirect: indirectLim > 0 && totals.indirect > indirectLim,
+    };
+  }, [totals, cleanOpLimit, creditOpLimit, indirectLimit]);
+
+  const riskLevelColor: Record<Risk['riskLevel'], string> = {
+    'Высокий': 'text-destructive',
+    'Средний': 'text-[hsl(var(--chart-yellow))]',
+    'Низкий': 'text-primary',
+  };
+
   const addScenario = () => {
-    setScenarios([...scenarios, {
+    setScenarios(prev => [...prev, {
       id: Date.now().toString(),
       description: '',
-      percentage: 0,
-      groupScenario: ''
+      groupScenario: '',
+      cleanOp: 0,
+      creditOp: 0,
+      indirect: 0,
     }]);
   };
 
   const removeScenario = (id: string) => {
-    setScenarios(scenarios.filter(s => s.id !== id));
+    if (scenarios.length <= 1) return;
+    setScenarios(prev => prev.filter(s => s.id !== id));
   };
 
-  const updateScenario = (id: string, field: keyof Scenario, value: string | number) => {
-    setScenarios(scenarios.map(s => s.id === id ? { ...s, [field]: value } : s));
+  const updateScenario = (id: string, field: keyof ScenarioFormData, value: string | number) => {
+    setScenarios(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
   const addMirror = () => {
-    setMirrors([...mirrors, {
-      id: Date.now().toString(),
-      subdivision: '',
-      percentage: 0
-    }]);
+    setMirrors(prev => [...prev, { id: Date.now().toString(), subdivision: '', percentage: 0 }]);
   };
 
   const removeMirror = (id: string) => {
-    setMirrors(mirrors.filter(m => m.id !== id));
+    setMirrors(prev => prev.filter(m => m.id !== id));
   };
 
   const updateMirror = (id: string, field: keyof Mirror, value: string | number) => {
-    setMirrors(mirrors.map(m => m.id === id ? { ...m, [field]: value } : m));
+    setMirrors(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
   };
 
   const handleSubmit = () => {
+    if (scenarios.length === 0) return;
+
     const newRisk: Partial<Risk> = {
       id: editRisk?.id || `QNR-${Math.floor(10000 + Math.random() * 90000)}`,
       status: 'В работе',
@@ -102,30 +167,27 @@ export function CreateRiskForm({ isOpen, onClose, onSave, editRisk }: CreateRisk
       process,
       riskProfile,
       riskName: riskProfile,
-      riskLevel,
+      riskLevel: calculatedRiskLevel,
       responseStrategy: strategy,
       qualitativeLosses,
-      cleanOpRisk: { value: parseFloat(cleanOpRisk) || 0, utilization: 0, limit: parseFloat(cleanOpLimit) || 0 },
-      creditOpRisk: { value: parseFloat(creditOpRisk) || 0, utilization: 0, limit: parseFloat(creditOpLimit) || 0 },
-      indirectLosses: { value: parseFloat(indirectLosses) || 0, utilization: 0, limit: parseFloat(indirectLimit) || 0 },
-      potentialLosses: 0,
-      scenarios,
+      cleanOpRisk: { value: totals.cleanOp, utilization: 0, limit: parseFloat(cleanOpLimit) || 0 },
+      creditOpRisk: { value: totals.creditOp, utilization: 0, limit: parseFloat(creditOpLimit) || 0 },
+      indirectLosses: { value: totals.indirect, utilization: 0, limit: parseFloat(indirectLimit) || 0 },
+      potentialLosses: totals.total,
+      scenarios: scenarios.map((s, i) => ({
+        id: s.id,
+        description: s.description,
+        groupScenario: s.groupScenario,
+        percentage: scenarioPercentages[i],
+      })),
       mirrors,
       author: 'Садыков Илья',
       createdAt: new Date().toLocaleDateString('ru-RU'),
-      source: 'Ручное создание'
+      source: 'Ручное создание',
     };
-    
+
     onSave(newRisk);
     onClose();
-  };
-
-  const getRiskLevelColor = () => {
-    switch (riskLevel) {
-      case 'Высокий': return 'text-destructive';
-      case 'Средний': return 'text-chart-yellow';
-      default: return 'text-muted-foreground';
-    }
   };
 
   return (
@@ -136,7 +198,7 @@ export function CreateRiskForm({ isOpen, onClose, onSave, editRisk }: CreateRisk
       actions={
         <>
           <Button variant="outline" onClick={onClose}>Отмена</Button>
-          <Button onClick={handleSubmit}>Сохранить</Button>
+          <Button onClick={handleSubmit} disabled={scenarios.length === 0}>Сохранить</Button>
         </>
       }
     >
@@ -144,11 +206,11 @@ export function CreateRiskForm({ isOpen, onClose, onSave, editRisk }: CreateRisk
       <div className="flex justify-end mb-6">
         <div className="px-4 py-2 border border-border rounded-lg bg-muted/30">
           <span className="text-sm text-muted-foreground">Уровень риска - </span>
-          <span className={`text-sm font-medium ${getRiskLevelColor()}`}>{riskLevel}</span>
+          <span className={cn("text-sm font-medium", riskLevelColor[calculatedRiskLevel])}>{calculatedRiskLevel}</span>
         </div>
       </div>
 
-      {/* Risk Parameters Section */}
+      {/* Block 1 — Risk Parameters */}
       <div className="form-section">
         <h2 className="text-lg font-semibold mb-4">Параметры риска</h2>
         <div className="grid grid-cols-2 gap-6">
@@ -178,100 +240,8 @@ export function CreateRiskForm({ isOpen, onClose, onSave, editRisk }: CreateRisk
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </div>
-
-      {/* Risk Capacity Section */}
-      <div className="form-section">
-        <h2 className="text-lg font-semibold mb-4">Рискоемкость и лимит</h2>
-        <div className="space-y-4">
-          {/* Clean Op Risk */}
-          <div className="grid grid-cols-[1fr,auto,auto,auto,auto] gap-4 items-end">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Чистый операционный риск</Label>
-              <Input value={cleanOpRisk} onChange={e => setCleanOpRisk(e.target.value)} placeholder="0 руб." />
-            </div>
-            <div className="space-y-2 w-24">
-              <Label className="text-muted-foreground">Вероятность</Label>
-              <Input value={cleanOpProb} onChange={e => setCleanOpProb(e.target.value)} placeholder="%" />
-            </div>
-            <div className="space-y-2 w-32">
-              <Label className="text-muted-foreground">Лимит</Label>
-              <Input value={cleanOpLimit} onChange={e => setCleanOpLimit(e.target.value)} placeholder="0 руб." />
-            </div>
-            {editRisk && (
-              <>
-                <div className="space-y-2 w-32">
-                  <Label className="text-muted-foreground">Лимит прошлого года</Label>
-                  <Input disabled value="500 руб." className="bg-muted" />
-                </div>
-                <div className="space-y-2 w-32">
-                  <Label className="text-muted-foreground">Утилизация прошлого года</Label>
-                  <Input disabled value="75%" className="bg-chart-yellow/10 text-chart-yellow" />
-                </div>
-              </>
-            )}
-          </div>
-          
-          {/* Credit Op Risk */}
-          <div className="grid grid-cols-[1fr,auto,auto,auto,auto] gap-4 items-end">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Операционный риск в кредитовании</Label>
-              <Input value={creditOpRisk} onChange={e => setCreditOpRisk(e.target.value)} placeholder="0 руб." />
-            </div>
-            <div className="space-y-2 w-24">
-              <Label className="text-muted-foreground">Вероятность</Label>
-              <Input value={creditOpProb} onChange={e => setCreditOpProb(e.target.value)} placeholder="%" />
-            </div>
-            <div className="space-y-2 w-32">
-              <Label className="text-muted-foreground">Лимит</Label>
-              <Input value={creditOpLimit} onChange={e => setCreditOpLimit(e.target.value)} placeholder="0 руб." />
-            </div>
-            {editRisk && (
-              <>
-                <div className="space-y-2 w-32">
-                  <Input disabled value="0 руб." className="bg-muted" />
-                </div>
-                <div className="space-y-2 w-32">
-                  <Input disabled value="N/A" className="bg-muted" />
-                </div>
-              </>
-            )}
-          </div>
-          
-          {/* Indirect Losses */}
-          <div className="grid grid-cols-[1fr,auto,auto,auto,auto] gap-4 items-end">
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Косвенные потери</Label>
-              <Input value={indirectLosses} onChange={e => setIndirectLosses(e.target.value)} placeholder="0 руб." />
-            </div>
-            <div className="space-y-2 w-24">
-              <Label className="text-muted-foreground">Вероятность</Label>
-              <Input value={indirectProb} onChange={e => setIndirectProb(e.target.value)} placeholder="%" />
-            </div>
-            <div className="space-y-2 w-32">
-              <Label className="text-muted-foreground">Лимит</Label>
-              <Input value={indirectLimit} onChange={e => setIndirectLimit(e.target.value)} placeholder="0 руб." />
-            </div>
-            {editRisk && (
-              <>
-                <div className="space-y-2 w-32">
-                  <Input disabled value="0 руб." className="bg-muted" />
-                </div>
-                <div className="space-y-2 w-32">
-                  <Input disabled value="N/Ф" className="bg-muted" />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Strategy Section */}
-      <div className="form-section">
-        <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label>Стратегия реагирование<span className="text-destructive">*</span></Label>
+            <Label>Стратегия реагирования<span className="text-destructive">*</span></Label>
             <Select value={strategy} onValueChange={setStrategy}>
               <SelectTrigger className="bg-background">
                 <SelectValue placeholder="Выбрать" />
@@ -299,45 +269,81 @@ export function CreateRiskForm({ isOpen, onClose, onSave, editRisk }: CreateRisk
         </div>
       </div>
 
-      {/* Scenarios Section */}
+      {/* Block 2 — Scenarios */}
       <div className="form-section">
         <h2 className="text-lg font-semibold mb-4">Сценарии реализации риска</h2>
         <div className="space-y-4">
           {scenarios.map((scenario, index) => (
-            <div key={scenario.id} className="space-y-3">
-              <div className="flex items-start gap-4">
-                <div className="flex-1 space-y-2">
-                  <Label>Сценарий {index + 1}{index === 0 && <span className="text-destructive">*</span>}</Label>
-                  <Textarea 
-                    value={scenario.description}
-                    onChange={e => updateScenario(scenario.id, 'description', e.target.value)}
-                    placeholder="Описание сценария..."
-                    className="min-h-[100px]"
-                  />
-                  <p className="text-sm text-primary">
-                    Групповой сценарий: {scenario.groupScenario || 'Предоставление недостоверных сведений клиентом'}
-                  </p>
+            <div key={scenario.id} className="p-5 rounded-xl bg-muted/40 border border-border space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h4 className="text-sm font-semibold">Сценарий {index + 1}</h4>
+                  <span className="text-xs text-muted-foreground">
+                    Доля: <span className="font-semibold text-foreground">{scenarioPercentages[index]}%</span>
+                  </span>
                 </div>
-                <div className="space-y-2 w-28">
-                  <Label>% оценки</Label>
-                  <Input 
-                    value={scenario.percentage}
-                    onChange={e => updateScenario(scenario.id, 'percentage', parseInt(e.target.value) || 0)}
-                    placeholder="0 %"
-                  />
-                </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="icon"
-                  className="mt-7"
+                  className="h-8 w-8"
                   onClick={() => removeScenario(scenario.id)}
+                  disabled={scenarios.length <= 1}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
+
+              <div className="space-y-1.5">
+                <Label>Название / групповой сценарий</Label>
+                <Input
+                  value={scenario.groupScenario}
+                  onChange={e => updateScenario(scenario.id, 'groupScenario', e.target.value)}
+                  placeholder="Предоставление недостоверных сведений клиентом"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Описание</Label>
+                <Textarea
+                  value={scenario.description}
+                  onChange={e => updateScenario(scenario.id, 'description', e.target.value)}
+                  placeholder="Описание сценария..."
+                  className="min-h-[80px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Чистый оп. риск (млн)</Label>
+                  <Input
+                    type="number"
+                    value={scenario.cleanOp || ''}
+                    onChange={e => updateScenario(scenario.id, 'cleanOp', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Оперриск в кредит. (млн)</Label>
+                  <Input
+                    type="number"
+                    value={scenario.creditOp || ''}
+                    onChange={e => updateScenario(scenario.id, 'creditOp', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Косвенные потери (млн)</Label>
+                  <Input
+                    type="number"
+                    value={scenario.indirect || ''}
+                    onChange={e => updateScenario(scenario.id, 'indirect', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
           ))}
-          
+
           <Button variant="ghost" className="gap-2 text-primary hover:text-primary hover:bg-primary/10" onClick={addScenario}>
             <Plus className="w-5 h-5 bg-primary text-primary-foreground rounded-full p-0.5" />
             Добавить сценарий
@@ -345,50 +351,114 @@ export function CreateRiskForm({ isOpen, onClose, onSave, editRisk }: CreateRisk
         </div>
       </div>
 
-      {/* Mirroring Section */}
+      {/* Block 3 — Calculated Totals (read-only) */}
+      <div className="form-section">
+        <h2 className="text-lg font-semibold mb-4">Итоговая оценка</h2>
+        <div className="p-5 rounded-xl border border-border bg-card">
+          <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Чистый оп. риск</p>
+              <p className="text-lg font-bold">{totals.cleanOp} млн</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Оперриск в кредит.</p>
+              <p className="text-lg font-bold">{totals.creditOp} млн</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Косвенные потери</p>
+              <p className="text-lg font-bold">{totals.indirect} млн</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Общая рискоёмкость</p>
+              <p className="text-lg font-bold">{totals.total} млн</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-border flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Уровень риска:</span>
+            <span className={cn("text-sm font-semibold", riskLevelColor[calculatedRiskLevel])}>
+              {calculatedRiskLevel}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Block 4 — Limits */}
+      <div className="form-section">
+        <h2 className="text-lg font-semibold mb-4">Лимиты</h2>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Чистый оп. риск (млн)</Label>
+            <Input
+              value={cleanOpLimit}
+              onChange={e => setCleanOpLimit(e.target.value)}
+              placeholder="0"
+            />
+            {limitWarnings.cleanOp && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Сумма выше лимита на риск
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Оперриск в кредит. (млн)</Label>
+            <Input
+              value={creditOpLimit}
+              onChange={e => setCreditOpLimit(e.target.value)}
+              placeholder="0"
+            />
+            {limitWarnings.creditOp && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Сумма выше лимита на риск
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Косвенные потери (млн)</Label>
+            <Input
+              value={indirectLimit}
+              onChange={e => setIndirectLimit(e.target.value)}
+              placeholder="0"
+            />
+            {limitWarnings.indirect && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Сумма выше лимита на риск
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Block 5 — Mirroring */}
       <div className="form-section">
         <h2 className="text-lg font-semibold mb-4">Зеркалирование</h2>
         <div className="space-y-4">
           {mirrors.map((mirror) => (
-            <div key={mirror.id} className="grid grid-cols-[1fr,auto,auto,auto,auto] gap-4 items-end">
-              <div className="space-y-2">
+            <div key={mirror.id} className="flex items-end gap-4">
+              <div className="flex-1 space-y-1.5">
                 <Label>Подразделение<span className="text-destructive">*</span></Label>
-                <Input 
+                <Input
                   value={mirror.subdivision}
                   onChange={e => updateMirror(mirror.id, 'subdivision', e.target.value)}
                   placeholder="Дивизион «Кошечки и собачки»"
                 />
               </div>
-              <div className="space-y-2 w-24">
+              <div className="w-24 space-y-1.5">
                 <Label>% зеркала<span className="text-destructive">*</span></Label>
-                <Input 
-                  value={mirror.percentage}
+                <Input
+                  value={mirror.percentage || ''}
                   onChange={e => updateMirror(mirror.id, 'percentage', parseInt(e.target.value) || 0)}
-                  placeholder="30 %"
+                  placeholder="30%"
                 />
               </div>
-              {editRisk && (
-                <>
-                  <div className="space-y-2 w-32">
-                    <Label className="text-muted-foreground">Лимит прошлого года</Label>
-                    <Input disabled value={mirror.limitLastYear || '200 руб.'} className="bg-muted" />
-                  </div>
-                  <div className="space-y-2 w-40">
-                    <Label className="text-muted-foreground">Факт/утилизация прошлого года</Label>
-                    <Input disabled value={mirror.utilizationLastYear || '150 руб. / 75%'} className="bg-muted" />
-                  </div>
-                </>
-              )}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => removeMirror(mirror.id)}
-              >
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => removeMirror(mirror.id)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           ))}
-          
+
           <Button variant="ghost" className="gap-2 text-primary hover:text-primary hover:bg-primary/10" onClick={addMirror}>
             <Plus className="w-5 h-5 bg-primary text-primary-foreground rounded-full p-0.5" />
             Добавить зеркало
