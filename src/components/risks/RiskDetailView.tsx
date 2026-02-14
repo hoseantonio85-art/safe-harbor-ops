@@ -6,6 +6,7 @@ import { FullscreenLightbox } from '@/components/ui/fullscreen-lightbox';
 import { UtilizationDrawer } from './UtilizationDrawer';
 import { HistoryDrawer } from './HistoryDrawer';
 import { UtilizationCard } from './UtilizationCard';
+import { RiskEditForm } from './RiskEditForm';
 import { Risk } from '@/types/risk';
 import { cn } from '@/lib/utils';
 import { mockMeasures } from '@/data/mockRisks';
@@ -78,10 +79,10 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
   return (
     <>
       <FullscreenLightbox isOpen={isOpen} onClose={onClose} title="" actions={headerActions}>
-        <div className="grid grid-cols-[1fr,320px] gap-8 px-2">
+        <div className={cn("gap-8 px-2", isEditMode ? "" : "grid grid-cols-[1fr,320px]")}>
           {/* Main content */}
           <div className="space-y-6">
-            {/* Header */}
+            {/* Header — always visible */}
             <div>
               <h1 className="text-xl font-semibold">
                 {risk.id}: {risk.riskName}
@@ -92,181 +93,197 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
               </div>
             </div>
 
-            {/* AI Alert */}
-            <div className="p-4 rounded-xl border" style={{
-              backgroundColor: 'hsl(var(--ai-alert))',
-              borderColor: 'hsl(var(--ai-alert-border))',
-            }}>
-              <div className="flex items-start gap-3">
-                <Sparkles className="w-5 h-5 shrink-0 mt-0.5" style={{ color: 'hsl(var(--ai-alert-foreground))' }} />
-                <div className="flex-1 space-y-2">
-                  <p className="text-sm font-medium" style={{ color: 'hsl(var(--ai-alert-foreground))' }}>
-                    Рекомендация AI-ассистента
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Выявлен новый сценарий риска по данным принятых рисков из <span className="text-primary underline cursor-pointer">RISK-999</span>. 
-                    Сумма риска увеличена. Уровень риска изменился на "Высокий". 
-                    Необходимо проработать мероприятия по снижению риска.
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-1 text-sm font-medium bg-gradient-to-r from-[hsl(var(--ai-alert-foreground))/10] to-[hsl(var(--ai-alert-border))/20] hover:from-[hsl(var(--ai-alert-foreground))/20] hover:to-[hsl(var(--ai-alert-border))/30] border border-[hsl(var(--ai-alert-border))]"
-                    style={{ color: 'hsl(var(--ai-alert-foreground))' }}
-                  >
-                    Переоценить риск
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Nav chips */}
-            <div className="sticky top-0 z-10 bg-background py-2 -mx-1 px-1 flex gap-2">
-              {sections.map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  className="text-xs px-3 py-1.5 rounded-full border border-border hover:border-primary/40 hover:text-primary transition-colors text-muted-foreground"
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Potential Losses */}
-            <section id="potential" className="space-y-3">
-              <h2 className="text-base font-semibold">Потенциальные потери</h2>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl border border-border bg-card">
-                  <p className="text-xs text-muted-foreground mb-1">Рискоемкость</p>
-                  <p className="text-lg font-bold">{risk.potentialLosses > 0 ? `${risk.potentialLosses.toLocaleString('ru-RU')} млн` : '—'}</p>
-                </div>
-                <div className="p-4 rounded-xl border border-border bg-card">
-                  <p className="text-xs text-muted-foreground mb-1">Вероятность</p>
-                  <p className="text-lg font-bold">0.3%</p>
-                </div>
-                <div className="p-4 rounded-xl border border-border bg-card">
-                  <p className="text-xs text-muted-foreground mb-1">Динамика к пред. периоду</p>
-                  <div className="flex items-center gap-1.5">
-                    {potentialDelta > 0 ? (
-                      <TrendingUp className="w-4 h-4 text-destructive" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-primary" />
-                    )}
-                    <span className={cn("text-lg font-bold", potentialDelta > 0 ? "text-destructive" : "text-primary")}>
-                      {potentialDelta > 0 ? '+' : ''}{potentialDelta}%
-                    </span>
+            {isEditMode ? (
+              /* ===== EDIT MODE: full form ===== */
+              <RiskEditForm
+                risk={risk}
+                onSave={(updated) => {
+                  onEdit({ ...risk, ...updated } as Risk);
+                  setIsEditMode(false);
+                }}
+                onCancel={() => setIsEditMode(false)}
+              />
+            ) : (
+              /* ===== VIEW MODE: analytics ===== */
+              <>
+                {/* AI Alert */}
+                <div className="p-4 rounded-xl border" style={{
+                  backgroundColor: 'hsl(var(--ai-alert))',
+                  borderColor: 'hsl(var(--ai-alert-border))',
+                }}>
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 shrink-0 mt-0.5" style={{ color: 'hsl(var(--ai-alert-foreground))' }} />
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm font-medium" style={{ color: 'hsl(var(--ai-alert-foreground))' }}>
+                        Рекомендация AI-ассистента
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Выявлен новый сценарий риска по данным принятых рисков из <span className="text-primary underline cursor-pointer">RISK-999</span>. 
+                        Сумма риска увеличена. Уровень риска изменился на "Высокий". 
+                        Необходимо проработать мероприятия по снижению риска.
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1 text-sm font-medium bg-gradient-to-r from-[hsl(var(--ai-alert-foreground))/10] to-[hsl(var(--ai-alert-border))/20] hover:from-[hsl(var(--ai-alert-foreground))/20] hover:to-[hsl(var(--ai-alert-border))/30] border border-[hsl(var(--ai-alert-border))]"
+                        style={{ color: 'hsl(var(--ai-alert-foreground))' }}
+                      >
+                        Переоценить риск
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
 
-            {/* Utilization */}
-            <section id="utilization" className="space-y-3">
-              <h2 className="text-base font-semibold">Утилизация лимитов</h2>
-              <div className="grid grid-cols-3 gap-5">
-                <UtilizationCard
-                  title="Чистый операционный риск"
-                  lossLimit={risk.cleanOpRisk}
-                  onExpand={() => setUtilizationOpen(true)}
-                />
-                <UtilizationCard
-                  title="Оперриск в кредитовании"
-                  lossLimit={risk.creditOpRisk}
-                  onExpand={() => setUtilizationOpen(true)}
-                />
-                <UtilizationCard
-                  title="Косвенные потери"
-                  lossLimit={risk.indirectLosses}
-                  onExpand={() => setUtilizationOpen(true)}
-                />
-              </div>
-
-              {/* Incidents widget */}
-              <button
-                onClick={() => setUtilizationOpen(true)}
-                className="w-full flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Инциденты</span>
-                  <Badge variant="outline" className="text-xs">22</Badge>
-                </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </section>
-
-            {/* Scenarios */}
-            <section id="scenarios" className="space-y-3">
-              <h2 className="text-base font-semibold">Сценарии реализации риска</h2>
-              {risk.scenarios.length > 0 ? (
-                <div className="space-y-3">
-                  {risk.scenarios.map((scenario) => (
-                    <div key={scenario.id} className="p-4 rounded-xl border border-border bg-card">
-                      <div className="flex items-start gap-4">
-                        <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shrink-0">
-                          <FileText className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-sm">{scenario.groupScenario}</h4>
-                            <Badge variant="outline" className="text-[10px] bg-[hsl(var(--ai-alert))] text-[hsl(var(--ai-alert-foreground))] border-[hsl(var(--ai-alert-border))]">
-                              Новый
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2">{scenario.description}</p>
-                          <div className="flex items-center gap-3 pt-1">
-                            <span className="text-xs text-muted-foreground">Доля оценки:</span>
-                            <span className="text-sm font-semibold">{scenario.percentage}%</span>
-                            {mockMeasures.length > 0 && (
-                              <span className="text-xs text-primary">Мера назначена</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                {/* Nav chips */}
+                <div className="sticky top-0 z-10 bg-background py-2 -mx-1 px-1 flex gap-2">
+                  {sections.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      className="text-xs px-3 py-1.5 rounded-full border border-border hover:border-primary/40 hover:text-primary transition-colors text-muted-foreground"
+                    >
+                      {s.label}
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">Сценарии не добавлены</p>
-              )}
-            </section>
 
-            {/* Connections */}
-            <section id="connections" className="space-y-4">
-              <h2 className="text-base font-semibold">Связи</h2>
-              
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Меры</h3>
-                {mockMeasures.map((measure) => (
-                  <div key={measure.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-                    <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{measure.title}</p>
-                      <p className="text-xs text-muted-foreground">{measure.id} • {measure.plannedDate}</p>
+                {/* Potential Losses */}
+                <section id="potential" className="space-y-3">
+                  <h2 className="text-base font-semibold">Потенциальные потери</h2>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 rounded-xl border border-border bg-card">
+                      <p className="text-xs text-muted-foreground mb-1">Рискоемкость</p>
+                      <p className="text-lg font-bold">{risk.potentialLosses > 0 ? `${risk.potentialLosses.toLocaleString('ru-RU')} млн` : '—'}</p>
                     </div>
-                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/40 shrink-0">
-                      {measure.status}
-                    </Badge>
+                    <div className="p-4 rounded-xl border border-border bg-card">
+                      <p className="text-xs text-muted-foreground mb-1">Вероятность</p>
+                      <p className="text-lg font-bold">0.3%</p>
+                    </div>
+                    <div className="p-4 rounded-xl border border-border bg-card">
+                      <p className="text-xs text-muted-foreground mb-1">Динамика к пред. периоду</p>
+                      <div className="flex items-center gap-1.5">
+                        {potentialDelta > 0 ? (
+                          <TrendingUp className="w-4 h-4 text-destructive" />
+                        ) : (
+                          <TrendingDown className="w-4 h-4 text-primary" />
+                        )}
+                        <span className={cn("text-lg font-bold", potentialDelta > 0 ? "text-destructive" : "text-primary")}>
+                          {potentialDelta > 0 ? '+' : ''}{potentialDelta}%
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </section>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Решения по рискам</h3>
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground/30 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Пересмотр стратегии реагирования</p>
-                    <p className="text-xs text-muted-foreground">RSK-001 • 10.02.2026</p>
+                {/* Utilization */}
+                <section id="utilization" className="space-y-3">
+                  <h2 className="text-base font-semibold">Утилизация лимитов</h2>
+                  <div className="grid grid-cols-3 gap-5">
+                    <UtilizationCard
+                      title="Чистый операционный риск"
+                      lossLimit={risk.cleanOpRisk}
+                      onExpand={() => setUtilizationOpen(true)}
+                    />
+                    <UtilizationCard
+                      title="Оперриск в кредитовании"
+                      lossLimit={risk.creditOpRisk}
+                      onExpand={() => setUtilizationOpen(true)}
+                    />
+                    <UtilizationCard
+                      title="Косвенные потери"
+                      lossLimit={risk.indirectLosses}
+                      onExpand={() => setUtilizationOpen(true)}
+                    />
                   </div>
-                  <Badge variant="outline" className="text-xs shrink-0">В работе</Badge>
-                </div>
-              </div>
-            </section>
+
+                  {/* Incidents widget */}
+                  <button
+                    onClick={() => setUtilizationOpen(true)}
+                    className="w-full flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Инциденты</span>
+                      <Badge variant="outline" className="text-xs">22</Badge>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </section>
+
+                {/* Scenarios */}
+                <section id="scenarios" className="space-y-3">
+                  <h2 className="text-base font-semibold">Сценарии реализации риска</h2>
+                  {risk.scenarios.length > 0 ? (
+                    <div className="space-y-3">
+                      {risk.scenarios.map((scenario) => (
+                        <div key={scenario.id} className="p-4 rounded-xl border border-border bg-card">
+                          <div className="flex items-start gap-4">
+                            <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                              <FileText className="w-4 h-4 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium text-sm">{scenario.groupScenario}</h4>
+                                <Badge variant="outline" className="text-[10px] bg-[hsl(var(--ai-alert))] text-[hsl(var(--ai-alert-foreground))] border-[hsl(var(--ai-alert-border))]">
+                                  Новый
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2">{scenario.description}</p>
+                              <div className="flex items-center gap-3 pt-1">
+                                <span className="text-xs text-muted-foreground">Доля оценки:</span>
+                                <span className="text-sm font-semibold">{scenario.percentage}%</span>
+                                {mockMeasures.length > 0 && (
+                                  <span className="text-xs text-primary">Мера назначена</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">Сценарии не добавлены</p>
+                  )}
+                </section>
+
+                {/* Connections */}
+                <section id="connections" className="space-y-4">
+                  <h2 className="text-base font-semibold">Связи</h2>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">Меры</h3>
+                    {mockMeasures.map((measure) => (
+                      <div key={measure.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                        <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{measure.title}</p>
+                          <p className="text-xs text-muted-foreground">{measure.id} • {measure.plannedDate}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/40 shrink-0">
+                          {measure.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">Решения по рискам</h3>
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                      <div className="w-2 h-2 rounded-full bg-muted-foreground/30 shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">Пересмотр стратегии реагирования</p>
+                        <p className="text-xs text-muted-foreground">RSK-001 • 10.02.2026</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">В работе</Badge>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar — hidden in edit mode */}
+          {!isEditMode && (
           <div className="space-y-4">
             {/* Segmented control */}
             <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
@@ -379,7 +396,8 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
             >
               Удалить риск
             </Button>
-          </div>
+           </div>
+          )}
         </div>
       </FullscreenLightbox>
 
