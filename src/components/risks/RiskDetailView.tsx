@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { History, Plus, FileText, Sparkles, TrendingUp, TrendingDown, ArrowRight, Pencil, AlertTriangle } from 'lucide-react';
+import { History, Plus, FileText, Sparkles, TrendingUp, TrendingDown, ArrowRight, Pencil, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FullscreenLightbox } from '@/components/ui/fullscreen-lightbox';
@@ -62,7 +62,7 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
 
   if (!risk) return null;
 
-  const potentialDelta = 12;
+  
 
   const headerActions = isEditMode ? (
     <div className="flex items-center gap-2">
@@ -147,34 +147,6 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
                   ))}
                 </div>
 
-                {/* Potential Losses */}
-                <section id="potential" className="space-y-3">
-                  <h2 className="text-base font-semibold">Потенциальные потери</h2>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 rounded-xl border border-border bg-card">
-                      <p className="text-xs text-muted-foreground mb-1">Рискоемкость</p>
-                      <p className="text-lg font-bold">{risk.potentialLosses > 0 ? `${risk.potentialLosses.toLocaleString('ru-RU')} млн` : '—'}</p>
-                    </div>
-                    <div className="p-4 rounded-xl border border-border bg-card">
-                      <p className="text-xs text-muted-foreground mb-1">Вероятность</p>
-                      <p className="text-lg font-bold">0.3%</p>
-                    </div>
-                    <div className="p-4 rounded-xl border border-border bg-card">
-                      <p className="text-xs text-muted-foreground mb-1">Динамика к пред. периоду</p>
-                      <div className="flex items-center gap-1.5">
-                        {potentialDelta > 0 ? (
-                          <TrendingUp className="w-4 h-4 text-destructive" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4 text-primary" />
-                        )}
-                        <span className={cn("text-lg font-bold", potentialDelta > 0 ? "text-destructive" : "text-primary")}>
-                          {potentialDelta > 0 ? '+' : ''}{potentialDelta}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
                 {/* Utilization */}
                 <section id="utilization" className="space-y-3">
                   <h2 className="text-base font-semibold">Утилизация лимитов</h2>
@@ -195,19 +167,34 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
                       onExpand={() => setUtilizationOpen(true)}
                     />
                   </div>
+                </section>
 
-                  {/* Incidents widget */}
-                  <button
-                    onClick={() => setUtilizationOpen(true)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Инциденты</span>
-                      <Badge variant="outline" className="text-xs">22</Badge>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                  </button>
+                {/* Potential Losses — 3 cards by loss type */}
+                <section id="potential" className="space-y-3">
+                  <h2 className="text-base font-semibold">Потенциальные потери</h2>
+                  <div className="grid grid-cols-3 gap-4">
+                    {([
+                      { label: 'Чистый операционный риск', value: risk.cleanOpRisk.value, delta: 12 },
+                      { label: 'Оперриск в кредитовании', value: risk.creditOpRisk.value, delta: -5 },
+                      { label: 'Косвенные потери', value: risk.indirectLosses.value, delta: 3 },
+                    ] as const).map((item) => (
+                      <div key={item.label} className="p-4 rounded-xl border border-border bg-card space-y-2">
+                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                        <p className="text-xl font-bold">{item.value.toLocaleString('ru-RU')} млн</p>
+                        <div className="flex items-center gap-1.5">
+                          {item.delta > 0 ? (
+                            <TrendingUp className="w-3.5 h-3.5 text-destructive" />
+                          ) : (
+                            <TrendingDown className="w-3.5 h-3.5 text-primary" />
+                          )}
+                          <span className={cn("text-xs font-semibold", item.delta > 0 ? "text-destructive" : "text-primary")}>
+                            {item.delta > 0 ? '+' : ''}{item.delta}%
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">к пред. периоду</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </section>
 
                 {/* Scenarios */}
@@ -229,9 +216,15 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground line-clamp-2">{scenario.description}</p>
-                              <div className="flex items-center gap-3 pt-1">
-                                <span className="text-xs text-muted-foreground">Доля оценки:</span>
-                                <span className="text-sm font-semibold">{scenario.percentage}%</span>
+                            <div className="flex items-center gap-4 pt-1 flex-wrap">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground">Потенц. потери:</span>
+                                  <span className="text-sm font-semibold">{Math.round(risk.potentialLosses * scenario.percentage / 100).toLocaleString('ru-RU')} млн</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground">Доля:</span>
+                                  <span className="text-sm font-semibold">{scenario.percentage}%</span>
+                                </div>
                                 {mockMeasures.length > 0 && (
                                   <span className="text-xs text-primary">Мера назначена</span>
                                 )}
@@ -382,20 +375,12 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit }: RiskDetailView
                 <Button variant="outline" className="w-full" size="sm">
                   Вернуть на доработку
                 </Button>
-                <Button variant="ghost" className="w-full text-muted-foreground" size="sm">
-                  Риск устранён
+                <Button variant="secondary" className="w-full gap-2" size="sm">
+                  <XCircle className="w-3.5 h-3.5" />
+                  Закрыть риск
                 </Button>
               </div>
             )}
-
-            <Button
-              variant="outline"
-              className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/5"
-              disabled
-              title="Удаление запрещено: риск утверждён"
-            >
-              Удалить риск
-            </Button>
            </div>
           )}
         </div>

@@ -70,16 +70,36 @@ export function UtilizationCard({ title, lossLimit, onExpand }: UtilizationCardP
             </button>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">Лимит не установлен</p>
+          <>
+            {/* No limit — show fact as 0 with label */}
+            <div className="flex items-baseline justify-between">
+              <span className="text-xl font-bold">{value} млн</span>
+              <span className="text-sm font-semibold text-muted-foreground">0%</span>
+            </div>
+
+            {/* Empty progress bar */}
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden" />
+
+            <p className="text-xs text-muted-foreground">Лимит не установлен</p>
+
+            {/* Details toggle still available */}
+            <button
+              onClick={() => setDetailsOpen(!detailsOpen)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors self-start"
+            >
+              {detailsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              Детали
+            </button>
+          </>
         )}
       </div>
 
       {/* Inline expanded details */}
-      {detailsOpen && hasLimit && (
+      {detailsOpen && (
         <div className="px-5 pb-5 pt-0 border-t border-border/50 space-y-1.5">
           <div className="flex items-baseline justify-between pt-3">
             <span className="text-xs text-muted-foreground">Лимит</span>
-            <span className="text-sm font-medium">{limit} млн</span>
+            <span className="text-sm font-medium">{hasLimit ? `${limit} млн` : 'Не установлен'}</span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-muted-foreground">Факт</span>
@@ -87,7 +107,7 @@ export function UtilizationCard({ title, lossLimit, onExpand }: UtilizationCardP
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-muted-foreground">Прогноз</span>
-            <span className="text-sm text-muted-foreground">{lossLimit.forecast2025 ?? '—'} млн</span>
+            <span className="text-sm text-muted-foreground">{lossLimit.forecast2025 ?? 0} млн</span>
           </div>
           {lossLimit.fact2024 != null && (
             <div className="flex items-baseline justify-between">
