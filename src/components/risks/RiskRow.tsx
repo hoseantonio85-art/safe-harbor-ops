@@ -61,10 +61,10 @@ function RiskLevelBadge({ level }: { level: Risk['riskLevel'] }) {
 
 function LossItem({ label, value }: { label: string; value: number }) {
   return (
-    <span className="text-xs text-muted-foreground">
+    <span className="text-[13px] text-muted-foreground">
       <span className="text-muted-foreground/70">{label}:</span>{' '}
-      <span className={cn("font-medium", value > 0 ? "text-foreground" : "text-muted-foreground/50")}>
-        {value > 0 ? `${value.toLocaleString('ru-RU')}` : '—'}
+      <span className={cn("font-semibold", value > 0 ? "text-foreground" : "text-muted-foreground/50")}>
+        {value.toLocaleString('ru-RU')}
       </span>
     </span>
   );
@@ -148,7 +148,7 @@ export function RiskRow({
         </div>
 
         {/* Row 4: Losses */}
-        <div className="flex items-center gap-4 pt-1 border-t border-border/50">
+        <div className="flex items-center gap-5 pt-1.5 border-t border-border/50">
           <LossItem label="Чистый" value={risk.cleanOpRisk.value} />
           <LossItem label="Кредит" value={risk.creditOpRisk.value} />
           <LossItem label="Косвенные" value={risk.indirectLosses.value} />

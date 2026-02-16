@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Pencil, Save, Send, X, ListTodo, CheckSquare } from 'lucide-react';
+import { Plus, Pencil, Save, Send, X, ListTodo, CheckSquare, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/risks/MetricCard';
@@ -48,6 +48,7 @@ const Index = () => {
 
   // Filter state
   const [showTasksOnly, setShowTasksOnly] = useState(false);
+  const [showHighRiskOnly, setShowHighRiskOnly] = useState(false);
   const [selectedSubdivision, setSelectedSubdivision] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('2026');
 
@@ -60,11 +61,14 @@ const Index = () => {
     if (showTasksOnly) {
       filtered = filtered.filter(r => r.status === 'В работе' || r.status === 'На согласовании');
     }
+    if (showHighRiskOnly) {
+      filtered = filtered.filter(r => r.riskLevel === 'Высокий');
+    }
     if (selectedSubdivision !== 'all') {
       filtered = filtered.filter(r => r.subdivision === selectedSubdivision);
     }
     return filtered;
-  }, [risks, showTasksOnly, selectedSubdivision]);
+  }, [risks, showTasksOnly, showHighRiskOnly, selectedSubdivision]);
 
   const aggregates = useMemo(() => {
     const limitsToUse = screenMode === 'edit' ? draftLimits : pendingChanges;
@@ -232,6 +236,7 @@ const Index = () => {
 
   const awaitingApprovalCount = risks.filter(r => r.status === 'На согласовании').length;
   const tasksCount = risks.filter(r => r.status === 'В работе' || r.status === 'На согласовании').length;
+  const highRiskCount = risks.filter(r => r.riskLevel === 'Высокий').length;
 
   return (
     <MainLayout>
@@ -316,6 +321,18 @@ const Index = () => {
                   <ListTodo className="w-4 h-4" />
                   Задачи
                   <span className="ml-1 px-1.5 py-0.5 text-xs rounded-md bg-background/20 font-medium">{tasksCount}</span>
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              <ToggleGroup
+                type="single"
+                value={showHighRiskOnly ? 'high' : ''}
+                onValueChange={(val) => setShowHighRiskOnly(val === 'high')}
+              >
+                <ToggleGroupItem value="high" className="gap-2 data-[state=on]:bg-destructive/15 data-[state=on]:text-destructive">
+                  <AlertTriangle className="w-4 h-4" />
+                  Высокий уровень
+                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-md bg-background/20 font-medium">{highRiskCount}</span>
                 </ToggleGroupItem>
               </ToggleGroup>
 
