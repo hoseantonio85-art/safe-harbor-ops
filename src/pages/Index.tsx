@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/risks/MetricCard';
 import { RiskRow } from '@/components/risks/RiskRow';
-import { CreateRiskForm } from '@/components/risks/CreateRiskForm';
+import { RiskWizardForm } from '@/components/risks/RiskWizardForm';
 import { RiskDetailView } from '@/components/risks/RiskDetailView';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -32,10 +32,9 @@ interface DraftLimits {
 const Index = () => {
   const [risks, setRisks] = useState<Risk[]>(mockRisks);
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
+  const [wizardEditRisk, setWizardEditRisk] = useState<Risk | null>(null);
   
   // Screen mode state
   const [screenMode, setScreenMode] = useState<ScreenMode>('view');
@@ -101,42 +100,49 @@ const Index = () => {
     setIsDetailOpen(true);
   };
 
-  const handleCreateRisk = (newRisk: Partial<Risk>) => {
-    const fullRisk: Risk = {
-      ...newRisk,
-      id: newRisk.id || `QNR-${Math.floor(10000 + Math.random() * 90000)}`,
-      status: 'В работе',
-      block: 'Блок Сеть продаж',
-      subdivision: newRisk.subdivision || 'Управление продаж и обслуживания',
-      process: newRisk.process || '',
-      riskName: newRisk.riskProfile || '',
-      riskLevel: newRisk.riskLevel || 'Низкий',
-      riskProfile: newRisk.riskProfile || '',
-      cleanOpRisk: newRisk.cleanOpRisk || { value: 0, utilization: 0 },
-      creditOpRisk: newRisk.creditOpRisk || { value: 0, utilization: 0 },
-      indirectLosses: newRisk.indirectLosses || { value: 0, utilization: 0 },
-      potentialLosses: newRisk.potentialLosses || 0,
-      responseStrategy: newRisk.responseStrategy || '',
-      qualitativeLosses: newRisk.qualitativeLosses || '',
-      scenarios: newRisk.scenarios || [],
-      mirrors: newRisk.mirrors || [],
-      author: 'Садыков Илья',
-      createdAt: new Date().toLocaleDateString('ru-RU'),
-      source: 'Ручное создание',
-    } as Risk;
-    setRisks([...risks, fullRisk]);
+  const handleOpenWizardCreate = () => {
+    setWizardEditRisk(null);
+    setIsWizardOpen(true);
   };
 
-  const handleEditRisk = (risk: Risk) => {
-    setEditingRisk(risk);
+  const handleOpenWizardEdit = (risk: Risk) => {
+    setWizardEditRisk(risk);
     setIsDetailOpen(false);
-    setIsEditOpen(true);
+    setIsWizardOpen(true);
   };
 
-  const handleSaveRiskEdit = (updatedRisk: Partial<Risk>) => {
-    setRisks(risks.map(r => r.id === editingRisk?.id ? { ...r, ...updatedRisk } : r));
-    setIsEditOpen(false);
-    setEditingRisk(null);
+  const handleWizardSave = (riskData: Partial<Risk>) => {
+    if (wizardEditRisk) {
+      // Edit existing
+      setRisks(risks.map(r => r.id === wizardEditRisk.id ? { ...r, ...riskData } : r));
+    } else {
+      // Create new
+      const fullRisk: Risk = {
+        ...riskData,
+        id: riskData.id || `QNR-${Math.floor(10000 + Math.random() * 90000)}`,
+        status: 'В работе',
+        block: 'Блок Сеть продаж',
+        subdivision: riskData.subdivision || 'Управление продаж и обслуживания',
+        process: riskData.process || '',
+        riskName: riskData.riskProfile || '',
+        riskLevel: riskData.riskLevel || 'Низкий',
+        riskProfile: riskData.riskProfile || '',
+        cleanOpRisk: riskData.cleanOpRisk || { value: 0, utilization: 0 },
+        creditOpRisk: riskData.creditOpRisk || { value: 0, utilization: 0 },
+        indirectLosses: riskData.indirectLosses || { value: 0, utilization: 0 },
+        potentialLosses: riskData.potentialLosses || 0,
+        responseStrategy: riskData.responseStrategy || '',
+        qualitativeLosses: riskData.qualitativeLosses || '',
+        scenarios: riskData.scenarios || [],
+        mirrors: riskData.mirrors || [],
+        author: 'Садыков Илья',
+        createdAt: new Date().toLocaleDateString('ru-RU'),
+        source: 'Ручное создание',
+      } as Risk;
+      setRisks([...risks, fullRisk]);
+    }
+    setIsWizardOpen(false);
+    setWizardEditRisk(null);
   };
 
   const handleLimitChange = (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses' | 'potentialLosses', value: number) => {
@@ -257,7 +263,7 @@ const Index = () => {
                     <Pencil className="w-4 h-4" />
                     Редактировать лимиты
                   </Button>
-                  <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                  <Button onClick={handleOpenWizardCreate} className="gap-2">
                     <Plus className="w-4 h-4" />
                     Создать риск
                   </Button>
@@ -363,8 +369,6 @@ const Index = () => {
 
               <div className="flex-1" />
 
-              {/* Selection button moved to footer */}
-
               <span className="text-sm text-muted-foreground">
                 Показано {filteredRisks.length} из {risks.length}
               </span>
@@ -419,10 +423,18 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="secondary" onClick={handleReturnForRevision} disabled={awaitingApprovalCount === 0}>
+                <Button
+                  variant="outline"
+                  disabled={awaitingApprovalCount === 0}
+                  onClick={handleReturnForRevision}
+                >
                   Вернуть на доработку
                 </Button>
-                <Button onClick={handleSendForApproval} disabled={pendingChangesCount === 0 && selectedRiskIds.size === 0} className="gap-2">
+                <Button
+                  disabled={pendingChangesCount === 0 && !(selectionMode && selectedRiskIds.size > 0)}
+                  className="gap-2"
+                  onClick={handleSendForApproval}
+                >
                   <Send className="w-4 h-4" />
                   Отправить на согласование
                 </Button>
@@ -432,9 +444,22 @@ const Index = () => {
         )}
       </div>
 
-      <CreateRiskForm isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSave={handleCreateRisk} />
-      <CreateRiskForm isOpen={isEditOpen} onClose={() => { setIsEditOpen(false); setEditingRisk(null); }} onSave={handleSaveRiskEdit} editRisk={editingRisk} />
-      <RiskDetailView risk={selectedRisk} isOpen={isDetailOpen} onClose={() => { setIsDetailOpen(false); setSelectedRisk(null); }} onEdit={handleEditRisk} />
+      {/* Wizard: Create / Edit */}
+      <RiskWizardForm
+        isOpen={isWizardOpen}
+        onClose={() => { setIsWizardOpen(false); setWizardEditRisk(null); }}
+        onSave={handleWizardSave}
+        editRisk={wizardEditRisk}
+      />
+
+      {/* Detail View (monitoring) */}
+      <RiskDetailView
+        risk={selectedRisk}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onEdit={(risk) => handleOpenWizardEdit(risk)}
+        onOpenWizard={handleOpenWizardEdit}
+      />
     </MainLayout>
   );
 };
