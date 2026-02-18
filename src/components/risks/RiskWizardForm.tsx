@@ -602,6 +602,50 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
     );
   };
 
+  const stepperContent = (
+    <div className="py-3">
+      <div className="flex items-center gap-0">
+        {steps.map((step, i) => {
+          const isActive = currentStep === step.num;
+          const isCompleted = completedSteps.has(step.num);
+          const isAccessible = step.num <= currentStep || isCompleted || completedSteps.has((step.num - 1) as WizardStep);
+
+          return (
+            <div key={step.num} className="flex items-center flex-1">
+              <button
+                onClick={() => handleGoToStep(step.num)}
+                disabled={!isAccessible}
+                className={cn(
+                  "flex items-center gap-2.5 px-4 py-1.5 rounded-lg transition-colors w-full",
+                  isActive && "bg-primary/10 text-primary",
+                  !isActive && isCompleted && "text-primary hover:bg-primary/5",
+                  !isActive && !isCompleted && !isAccessible && "text-muted-foreground/50 cursor-not-allowed",
+                  !isActive && !isCompleted && isAccessible && "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                <div className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 border-2 transition-colors",
+                  isActive && "bg-primary text-primary-foreground border-primary",
+                  isCompleted && !isActive && "bg-primary text-primary-foreground border-primary",
+                  !isActive && !isCompleted && "border-border bg-card text-muted-foreground",
+                )}>
+                  {isCompleted && !isActive ? <Check className="w-3 h-3" /> : step.num}
+                </div>
+                <span className="text-sm font-medium truncate">{step.label}</span>
+              </button>
+              {i < steps.length - 1 && (
+                <div className={cn(
+                  "h-px w-8 shrink-0",
+                  completedSteps.has(step.num) ? "bg-primary" : "bg-border"
+                )} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <FullscreenLightbox
       isOpen={isOpen}
@@ -611,50 +655,8 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
       wide
       footer={footerContent}
       floatingAboveFooter={limitsMemoElement}
+      stickySubHeader={stepperContent}
     >
-      {/* Compact sticky stepper — under header, uses top offset to sit below the sticky header */}
-      <div className="sticky top-[-32px] z-10 -mx-8 px-8 py-3 bg-card border-b border-border mb-6">
-        <div className="flex items-center gap-0">
-          {steps.map((step, i) => {
-            const isActive = currentStep === step.num;
-            const isCompleted = completedSteps.has(step.num);
-            const isAccessible = step.num <= currentStep || isCompleted || completedSteps.has((step.num - 1) as WizardStep);
-
-            return (
-              <div key={step.num} className="flex items-center flex-1">
-                <button
-                  onClick={() => handleGoToStep(step.num)}
-                  disabled={!isAccessible}
-                  className={cn(
-                    "flex items-center gap-2.5 px-4 py-1.5 rounded-lg transition-colors w-full",
-                    isActive && "bg-primary/10 text-primary",
-                    !isActive && isCompleted && "text-primary hover:bg-primary/5",
-                    !isActive && !isCompleted && !isAccessible && "text-muted-foreground/50 cursor-not-allowed",
-                    !isActive && !isCompleted && isAccessible && "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 border-2 transition-colors",
-                    isActive && "bg-primary text-primary-foreground border-primary",
-                    isCompleted && !isActive && "bg-primary text-primary-foreground border-primary",
-                    !isActive && !isCompleted && "border-border bg-card text-muted-foreground",
-                  )}>
-                    {isCompleted && !isActive ? <Check className="w-3 h-3" /> : step.num}
-                  </div>
-                  <span className="text-sm font-medium truncate">{step.label}</span>
-                </button>
-                {i < steps.length - 1 && (
-                  <div className={cn(
-                    "h-px w-8 shrink-0",
-                    completedSteps.has(step.num) ? "bg-primary" : "bg-border"
-                  )} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Steps as card-style accordions */}
       <div className="space-y-4">
 

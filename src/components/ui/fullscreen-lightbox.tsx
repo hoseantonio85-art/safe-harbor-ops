@@ -11,6 +11,8 @@ interface FullscreenLightboxProps {
   wide?: boolean;
   footer?: React.ReactNode;
   floatingAboveFooter?: React.ReactNode;
+  /** Renders a sticky sub-header (e.g. stepper) between header and scroll area */
+  stickySubHeader?: React.ReactNode;
 }
 
 export function FullscreenLightbox({ 
@@ -23,6 +25,7 @@ export function FullscreenLightbox({
   wide = false,
   footer,
   floatingAboveFooter,
+  stickySubHeader,
 }: FullscreenLightboxProps) {
   if (!isOpen) return null;
 
@@ -30,8 +33,8 @@ export function FullscreenLightbox({
 
   return (
     <div className="fullscreen-lightbox animate-fade-in flex flex-col h-screen">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border shadow-sm shrink-0">
+      {/* Header — fixed at top, shrink-0 */}
+      <div className="shrink-0 z-20 bg-card border-b border-border shadow-sm">
         <div className={cn(maxW, "mx-auto px-8 py-4 flex items-center justify-between")}>
           {headerContent ? (
             <>
@@ -62,6 +65,15 @@ export function FullscreenLightbox({
           )}
         </div>
       </div>
+
+      {/* Sticky sub-header (stepper) — below header, above scroll */}
+      {stickySubHeader && (
+        <div className="shrink-0 z-10 bg-card border-b border-border">
+          <div className={cn(maxW, "mx-auto px-8")}>
+            {stickySubHeader}
+          </div>
+        </div>
+      )}
 
       {/* Scrollable content area */}
       <div className="flex-1 overflow-auto min-h-0">
