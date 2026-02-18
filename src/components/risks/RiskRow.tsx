@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ChevronDown, ChevronRight, MoreVertical, Send, RotateCcw, ExternalLink, Copy, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Risk } from '@/types/risk';
@@ -59,26 +59,100 @@ function RiskLevelBadge({ level }: { level: Risk['riskLevel'] }) {
   );
 }
 
-function LossItem({ label, value }: { label: string; value: number }) {
+function formatCurrency(value: number): string {
+  if (value === 0) return '0';
+  return value.toLocaleString('ru-RU');
+}
+
+function formatCurrencyInput(value: number): string {
+  if (value === 0) return '';
+  // Convert from "млн" to full rubles for editing (value is in млн)
+  const full = Math.round(value * 1_000_000);
+  return full.toLocaleString('ru-RU');
+}
+
+function parseCurrencyInput(raw: string): number {
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return 0;
+  // Convert back to млн
+  return parseInt(digits, 10) / 1_000_000;
+}
+
+function CurrencyInput({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const [displayValue, setDisplayValue] = useState(() => formatCurrencyInput(value));
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^\d]/g, '');
+    if (!raw) {
+      setDisplayValue('');
+      onChange(0);
+      return;
+    }
+    const num = parseInt(raw, 10);
+    setDisplayValue(num.toLocaleString('ru-RU'));
+    onChange(num / 1_000_000);
+  }, [onChange]);
+
   return (
-    <span className="text-[13px] text-muted-foreground">
-      <span className="text-muted-foreground/70">{label}:</span>{' '}
-      <span className={cn("font-semibold", value > 0 ? "text-foreground" : "text-muted-foreground/50")}>
-        {value.toLocaleString('ru-RU')}
-      </span>
-    </span>
+    <div className="relative">
+      <input
+        type="text"
+        inputMode="numeric"
+        value={displayValue}
+        onChange={handleChange}
+        placeholder="0"
+        className="w-full h-7 px-2 pr-6 text-sm font-medium bg-background border border-input rounded text-left focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₽</span>
+    </div>
+  );
+}
+
+function LossChip({
+  label,
+  value,
+  editMode,
+  editValue,
+  onEditChange,
+}: {
+  label: string;
+  value: number;
+  editMode?: boolean;
+  editValue?: number;
+  onEditChange?: (v: number) => void;
+}) {
+  return (
+    <div className="flex-1 min-w-[120px] bg-muted/60 rounded-lg px-3 py-2 h-[52px] flex flex-col justify-center">
+      <span className="text-[10px] text-muted-foreground leading-tight">{label}</span>
+      {editMode && onEditChange ? (
+        <CurrencyInput value={editValue ?? value} onChange={onEditChange} />
+      ) : (
+        <span className="text-sm font-semibold text-foreground leading-tight">
+          {formatCurrency(value)}
+        </span>
+      )}
+    </div>
   );
 }
 
 export function RiskRow({
   risk,
   mode,
+  draftLimits,
+  onLimitChange,
   onRiskClick,
   selectionMode,
   isSelected,
   onToggleSelect,
 }: RiskRowProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const isEditMode = mode === 'edit';
 
   return (
     <div className={cn(
@@ -147,12 +221,33 @@ export function RiskRow({
           ↳ {risk.process} · {risk.subdivision} · {risk.block}
         </div>
 
-        {/* Row 4: Losses */}
-        <div className="flex items-center gap-5 pt-1.5 border-t border-border/50">
-          <LossItem label="Прямые" value={risk.cleanOpRisk.value} />
-          <LossItem label="Кредитные" value={risk.creditOpRisk.value} />
-          <LossItem label="Косвенные" value={risk.indirectLosses.value} />
-          <LossItem label="Потенц." value={risk.potentialLosses} />
+        {/* Row 4: Loss chips */}
+        <div className="flex items-center gap-2 pt-1.5 border-t border-border/50">
+          <LossChip
+            label="Прямые"
+            value={risk.cleanOpRisk.value}
+            editMode={isEditMode}
+            editValue={draftLimits?.cleanOpRisk}
+            onEditChange={isEditMode ? (v) => onLimitChange?.(risk.id, 'cleanOpRisk', v) : undefined}
+          />
+          <LossChip
+            label="Кредитные"
+            value={risk.creditOpRisk.value}
+            editMode={isEditMode}
+            editValue={draftLimits?.creditOpRisk}
+            onEditChange={isEditMode ? (v) => onLimitChange?.(risk.id, 'creditOpRisk', v) : undefined}
+          />
+          <LossChip
+            label="Косвенные"
+            value={risk.indirectLosses.value}
+            editMode={isEditMode}
+            editValue={draftLimits?.indirectLosses}
+            onEditChange={isEditMode ? (v) => onLimitChange?.(risk.id, 'indirectLosses', v) : undefined}
+          />
+          <LossChip
+            label="Потенц."
+            value={risk.potentialLosses}
+          />
         </div>
       </div>
 

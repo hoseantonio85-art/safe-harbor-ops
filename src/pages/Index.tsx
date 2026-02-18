@@ -265,7 +265,7 @@ const Index = () => {
         <div className="px-6 py-4 border-b border-border bg-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold">Карта рисков за период</h1>
+              <h1 className="text-xl font-semibold">Карта рисков</h1>
               {screenMode === 'edit' && (
                 <Badge variant="default" className="gap-1.5">Режим редактирования</Badge>
               )}
@@ -286,8 +286,7 @@ const Index = () => {
               {screenMode === 'edit' && (
                 <>
                   <Button variant="outline" onClick={handleCancelEdit} className="gap-2">
-                    <X className="w-4 h-4" />
-                    Отменить редактирование
+                    Отмена
                   </Button>
                   <Button onClick={handleSaveLimits} className="gap-2">
                     <Save className="w-4 h-4" />
