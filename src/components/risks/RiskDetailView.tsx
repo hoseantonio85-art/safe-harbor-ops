@@ -60,7 +60,22 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit, onOpenWizard }: 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('info');
 
-  const fmtVal = (val: number) => `${val.toLocaleString('ru-RU')} млн`;
+  /** Compact format for monitoring: 1.2 млрд / 5.1 млн / 250 тыс / 42 */
+  const fmtVal = (val: number) => {
+    if (val >= 1_000_000_000) {
+      const v = val / 1_000_000_000;
+      return `${Number.isInteger(v) ? v : v.toFixed(1)} млрд`;
+    }
+    if (val >= 1_000_000) {
+      const v = val / 1_000_000;
+      return `${Number.isInteger(v) ? v : v.toFixed(1)} млн`;
+    }
+    if (val >= 1_000) {
+      const v = val / 1_000;
+      return `${Number.isInteger(v) ? v : v.toFixed(1)} тыс`;
+    }
+    return val.toLocaleString('ru-RU');
+  };
 
   if (!risk) return null;
 
