@@ -417,15 +417,15 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
             <div className="flex items-center gap-5 flex-1 min-w-0">
               <span className="text-xs">
                 <span className="text-muted-foreground">Прямые </span>
-                <span className="font-semibold text-foreground">{formatNum(cleanOpLimit)}</span>
+                <span className="font-semibold text-foreground">{formatNum(cleanOpLimit)} ₽</span>
               </span>
               <span className="text-xs">
                 <span className="text-muted-foreground">Кредитные </span>
-                <span className="font-semibold text-foreground">{formatNum(creditOpLimit)}</span>
+                <span className="font-semibold text-foreground">{formatNum(creditOpLimit)} ₽</span>
               </span>
               <span className="text-xs">
                 <span className="text-muted-foreground">Косвенные </span>
-                <span className="font-semibold text-foreground">{formatNum(indirectLimit)}</span>
+                <span className="font-semibold text-foreground">{formatNum(indirectLimit)} ₽</span>
               </span>
             </div>
             <button
@@ -671,15 +671,15 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                 <div className="grid grid-cols-3 gap-4">
                   <div className="p-3 rounded-lg bg-muted/30 border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Прямые потери</p>
-                    <p className="text-lg font-bold">{formatNum(totals.cleanOp)}</p>
+                    <p className="text-lg font-bold">{formatNum(totals.cleanOp)} <span className="text-sm font-normal text-muted-foreground">₽</span></p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/30 border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Кредитные потери</p>
-                    <p className="text-lg font-bold">{formatNum(totals.creditOp)}</p>
+                    <p className="text-lg font-bold">{formatNum(totals.creditOp)} <span className="text-sm font-normal text-muted-foreground">₽</span></p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/30 border border-border">
                     <p className="text-xs text-muted-foreground mb-1">Косвенные потери</p>
-                    <p className="text-lg font-bold">{formatNum(totals.indirect)}</p>
+                    <p className="text-lg font-bold">{formatNum(totals.indirect)} <span className="text-sm font-normal text-muted-foreground">₽</span></p>
                   </div>
                 </div>
               </div>
@@ -725,13 +725,13 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                   return (
                     <div key={scenario.id} className="p-5 rounded-xl bg-muted/40 border border-border space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3">
                           <h4 className="text-sm font-semibold">Сценарий {index + 1}</h4>
                           <span className="text-xs text-muted-foreground">
                             Доля: <span className="font-semibold text-foreground">{scenarioPercentages[index]}%</span>
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Сумма: <span className="font-semibold text-foreground">{formatNum(scenarioTotal)}</span>
+                            Потенциальные потери: <span className="font-semibold text-foreground">{formatNum(scenarioTotal)} ₽</span>
                           </span>
                         </div>
                         <Button
@@ -752,6 +752,7 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                         className="min-h-[80px]"
                       />
 
+                      <p className="text-xs font-medium text-muted-foreground mt-1">Потенциальные потери по сценарию</p>
                       <div className="grid grid-cols-4 gap-4">
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Прямые потери</Label>
@@ -861,15 +862,15 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
                   <div className="grid grid-cols-3 gap-4">
                     <div className="p-3 rounded-lg bg-card border border-border">
                       <p className="text-xs text-muted-foreground mb-0.5">Лимит: Прямые</p>
-                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.cleanOp || 0)}</p>
+                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.cleanOp || 0)} <span className="text-xs font-normal text-muted-foreground">₽</span></p>
                     </div>
                     <div className="p-3 rounded-lg bg-card border border-border">
                       <p className="text-xs text-muted-foreground mb-0.5">Лимит: Кредитные</p>
-                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.creditOp || 0)}</p>
+                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.creditOp || 0)} <span className="text-xs font-normal text-muted-foreground">₽</span></p>
                     </div>
                     <div className="p-3 rounded-lg bg-card border border-border">
                       <p className="text-xs text-muted-foreground mb-0.5">Лимит: Косвенные</p>
-                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.indirect || 0)}</p>
+                      <p className="text-sm font-semibold">{formatNum(mirrorLimits[idx]?.indirect || 0)} <span className="text-xs font-normal text-muted-foreground">₽</span></p>
                     </div>
                   </div>
                 </div>
