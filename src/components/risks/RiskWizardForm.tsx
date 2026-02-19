@@ -301,19 +301,21 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
   const [strategy, setStrategy] = useState(editRisk?.responseStrategy || '');
   const [qualitativeLosses, setQualitativeLosses] = useState(editRisk?.qualitativeLosses || '');
 
-  const [scenarios, setScenarios] = useState<ScenarioFormData[]>(() => {
-    if (editRisk?.scenarios && editRisk.scenarios.length > 0) {
-      return editRisk.scenarios.map(s => ({
+  const buildScenariosFromRisk = (risk: Risk | null | undefined): ScenarioFormData[] => {
+    if (risk?.scenarios && risk.scenarios.length > 0) {
+      return risk.scenarios.map(s => ({
         id: s.id,
         description: s.description,
-        cleanOp: Math.round((editRisk.cleanOpRisk.value || 0) * s.percentage / 100),
-        creditOp: Math.round((editRisk.creditOpRisk.value || 0) * s.percentage / 100),
-        indirect: Math.round((editRisk.indirectLosses.value || 0) * s.percentage / 100),
+        cleanOp: Math.round((risk.cleanOpRisk.value || 0) * s.percentage / 100),
+        creditOp: Math.round((risk.creditOpRisk.value || 0) * s.percentage / 100),
+        indirect: Math.round((risk.indirectLosses.value || 0) * s.percentage / 100),
         probability: 0,
       }));
     }
     return [];
-  });
+  };
+
+  const [scenarios, setScenarios] = useState<ScenarioFormData[]>(() => buildScenariosFromRisk(editRisk));
 
   const [cleanOpLimit, setCleanOpLimit] = useState(editRisk?.cleanOpRisk?.limit || 0);
   const [creditOpLimit, setCreditOpLimit] = useState(editRisk?.creditOpRisk?.limit || 0);
@@ -329,6 +331,28 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
   const limitsRef = useRef<HTMLDivElement>(null);
   const [limitsOutOfView, setLimitsOutOfView] = useState(false);
   const [memoDismissed, setMemoDismissed] = useState(false);
+
+  // Reset all form state when editRisk changes (e.g. switching from create to edit or editing a different risk)
+  useEffect(() => {
+    setCurrentStep(1);
+    setCompletedSteps(new Set());
+    setAiPrefilled(false);
+    setAiLoading(false);
+    setProcess(editRisk?.process || '');
+    setRiskProfile(editRisk?.riskProfile || '');
+    setStrategy(editRisk?.responseStrategy || '');
+    setQualitativeLosses(editRisk?.qualitativeLosses || '');
+    setScenarios(buildScenariosFromRisk(editRisk));
+    setCleanOpLimit(editRisk?.cleanOpRisk?.limit || 0);
+    setCreditOpLimit(editRisk?.creditOpRisk?.limit || 0);
+    setIndirectLimit(editRisk?.indirectLosses?.limit || 0);
+    setMirrors(editRisk?.mirrors || []);
+    setMirrorEditLimits({});
+    setMemoDismissed(false);
+    setLimitsOutOfView(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editRisk?.id, isOpen]);
+
 
   const hasLimits = useMemo(() => {
     return cleanOpLimit > 0 || creditOpLimit > 0 || indirectLimit > 0;
@@ -505,7 +529,7 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
     };
 
     onSave(newRisk);
-    onClose();
+    // Note: onClose is handled by the parent (Index.tsx) after onSave to allow navigation logic
   };
 
   const step1Valid = !!process && !!riskProfile;

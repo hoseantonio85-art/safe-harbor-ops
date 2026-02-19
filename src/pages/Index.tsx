@@ -191,8 +191,13 @@ const Index = () => {
 
   const handleWizardSave = (riskData: Partial<Risk>) => {
     if (wizardEditRisk) {
-      // Edit existing
-      setRisks(risks.map(r => r.id === wizardEditRisk.id ? { ...r, ...riskData } : r));
+      // Edit existing — merge and return to detail view with updated data
+      const updatedRisk: Risk = { ...wizardEditRisk, ...riskData };
+      setRisks(prev => prev.map(r => r.id === wizardEditRisk.id ? updatedRisk : r));
+      setIsWizardOpen(false);
+      setSelectedRisk(updatedRisk);
+      setIsDetailOpen(true);
+      setWizardEditRisk(null);
     } else {
       // Create new
       const fullRisk: Risk = {
@@ -217,10 +222,10 @@ const Index = () => {
         createdAt: new Date().toLocaleDateString('ru-RU'),
         source: 'Ручное создание',
       } as Risk;
-      setRisks([...risks, fullRisk]);
+      setRisks(prev => [...prev, fullRisk]);
+      setIsWizardOpen(false);
+      setWizardEditRisk(null);
     }
-    setIsWizardOpen(false);
-    setWizardEditRisk(null);
   };
 
   const handleLimitChange = (riskId: string, field: 'cleanOpRisk' | 'creditOpRisk' | 'indirectLosses' | 'potentialLosses', value: number) => {
