@@ -454,20 +454,11 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
   };
 
   const handleGoToStep = (step: WizardStep) => {
-    if (step === currentStep) return;
-    // In edit mode — free navigation, no restrictions
-    if (isEditMode) {
-      setCurrentStep(step);
-      return;
-    }
-    // In create mode — allow going back freely, going forward only if previous step was visited
-    if (step < currentStep || completedSteps.has(step) || completedSteps.has((step - 1) as WizardStep)) {
-      setCurrentStep(step);
-    }
+    // Always allow free navigation — both in create and edit mode
+    setCurrentStep(step);
   };
 
   const handleSave = () => {
-    if (scenarios.length === 0) return;
 
     const newRisk: Partial<Risk> = {
       id: editRisk?.id || `QNR-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -530,8 +521,7 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
   const footerContent = (
     <div className="flex items-center justify-end gap-3">
       <Button variant="outline" onClick={onClose}>Отмена</Button>
-      {/* In edit mode always enable save; in create require step1 + step2 filled */}
-      <Button onClick={handleSave} disabled={isEditMode ? false : (!step1Valid || !step2Valid)}>
+      <Button onClick={handleSave}>
         Сохранить
       </Button>
     </div>
@@ -609,13 +599,11 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
     // In edit mode all steps are always accessible
     const isDisabled = false;
 
-    // Step validity indicator for create mode
+    // Step validity indicator — all steps always accessible, show completion state
     const getStepState = () => {
       if (isActive) return 'active';
       if (isCompleted) return 'completed';
-      if (isEditMode) return 'accessible';
-      const isAccessible = step < currentStep || completedSteps.has((step - 1) as WizardStep);
-      return isAccessible ? 'accessible' : 'idle';
+      return 'accessible';
     };
     const stepState = getStepState();
 
@@ -647,20 +635,16 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
         {steps.map((step, i) => {
           const isActive = currentStep === step.num;
           const isCompleted = completedSteps.has(step.num);
-          // In edit mode all steps always accessible; in create mode — previously visited
-          const isAccessible = isEditMode || step.num <= currentStep || isCompleted || completedSteps.has((step.num - 1) as WizardStep);
-
+          // All steps always accessible — no blocking in create or edit mode
           return (
             <div key={step.num} className="flex items-center flex-1">
               <button
                 onClick={() => handleGoToStep(step.num)}
-                disabled={!isAccessible}
                 className={cn(
                   "flex items-center gap-2.5 px-4 py-1.5 rounded-lg transition-colors w-full",
                   isActive && "bg-primary/10 text-primary",
                   !isActive && isCompleted && "text-primary hover:bg-primary/5",
-                  !isActive && !isCompleted && !isAccessible && "text-muted-foreground/50 cursor-not-allowed",
-                  !isActive && !isCompleted && isAccessible && "text-muted-foreground hover:bg-muted",
+                  !isActive && !isCompleted && "text-muted-foreground hover:bg-muted",
                 )}
               >
                 <div className={cn(
@@ -741,7 +725,7 @@ export function RiskWizardForm({ isOpen, onClose, onSave, editRisk }: RiskWizard
               {/* Продолжить — only shown in create mode */}
               {!isEditMode && (
                 <div className="flex justify-end pt-2">
-                  <Button onClick={handleContinueToStep2} disabled={!step1Valid}>
+                  <Button onClick={handleContinueToStep2}>
                     Продолжить
                   </Button>
                 </div>
