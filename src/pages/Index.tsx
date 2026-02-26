@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Plus, Pencil, Save, Send, X, ListTodo, CheckSquare, AlertTriangle, LayoutList, FolderKanban, SlidersHorizontal, Users, RefreshCw } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { Plus, Pencil, Save, Send, X, CheckSquare, AlertTriangle, LayoutList, FolderKanban, SlidersHorizontal, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/risks/MetricCard';
@@ -9,6 +9,7 @@ import { RiskWizardForm } from '@/components/risks/RiskWizardForm';
 import { RiskDetailView } from '@/components/risks/RiskDetailView';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -17,16 +18,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { mockRisks } from '@/data/mockRisks';
 import { Risk } from '@/types/risk';
+import { cn } from '@/lib/utils';
 
 type ViewMode = 'list' | 'processes';
 type ScreenMode = 'view' | 'edit';
-type PageMode = 'all' | 'my-events' | 'mirroring';
+type RegistryMode = 'registry' | 'actions' | 'mirroring';
+type ActionChip = 'evaluate' | 'approve' | 'correct';
 
 interface DraftLimits {
   [riskId: string]: {
@@ -52,12 +58,23 @@ const Index = () => {
   const [selectedRiskIds, setSelectedRiskIds] = useState<Set<string>>(new Set());
 
   // Filter state
-  const [pageMode, setPageMode] = useState<PageMode>('all');
-  const [showTasksOnly, setShowTasksOnly] = useState(false);
+  const [registryMode, setRegistryMode] = useState<RegistryMode>('registry');
+  const [activeActionChip, setActiveActionChip] = useState<ActionChip | null>(null);
   const [showHighRiskOnly, setShowHighRiskOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedSubdivision, setSelectedSubdivision] = useState<string>('all');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('2026');
   const [selectedProcessFilter, setSelectedProcessFilter] = useState<string | null>(null);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+
+  // Advanced filter state
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterRiskLevels, setFilterRiskLevels] = useState<string[]>([]);
+  const [filterStrategy, setFilterStrategy] = useState<string>('all');
+  const [filterProfile, setFilterProfile] = useState<string>('all');
+  const [filterHasMeasures, setFilterHasMeasures] = useState<string>('all');
+  const [filterHasLimit, setFilterHasLimit] = useState<string>('all');
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
@@ -70,20 +87,64 @@ const Index = () => {
 
   const filteredRisks = useMemo(() => {
     let filtered = risks;
-    if (showTasksOnly) {
-      filtered = filtered.filter(r => r.status === 'В работе' || r.status === 'На согласовании');
+
+    // Registry mode filtering
+    if (registryMode === 'actions') {
+      if (activeActionChip === 'evaluate') {
+        filtered = filtered.filter(r => r.status === 'Черновик' || r.status === 'В работе');
+      } else if (activeActionChip === 'approve') {
+        filtered = filtered.filter(r => r.status === 'На согласовании');
+      } else if (activeActionChip === 'correct') {
+        filtered = filtered.filter(r => r.status === 'В работе');
+      } else {
+        filtered = filtered.filter(r => r.status === 'В работе' || r.status === 'На согласовании' || r.status === 'Черновик');
+      }
+    } else if (registryMode === 'mirroring') {
+      filtered = filtered.filter(r => r.mirrors && r.mirrors.length > 0);
     }
+
+    // Quick filter: high risk
     if (showHighRiskOnly) {
       filtered = filtered.filter(r => r.riskLevel === 'Высокий');
     }
+
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(r =>
+        r.riskName.toLowerCase().includes(q) ||
+        r.id.toLowerCase().includes(q) ||
+        r.process.toLowerCase().includes(q) ||
+        r.riskProfile.toLowerCase().includes(q)
+      );
+    }
+
+    // Advanced filters
     if (selectedSubdivision !== 'all') {
       filtered = filtered.filter(r => r.subdivision === selectedSubdivision);
+    }
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(r => r.status === filterStatus);
+    }
+    if (filterRiskLevels.length > 0) {
+      filtered = filtered.filter(r => filterRiskLevels.includes(r.riskLevel));
+    }
+    if (filterStrategy !== 'all') {
+      filtered = filtered.filter(r => r.responseStrategy === filterStrategy);
+    }
+    if (filterProfile !== 'all') {
+      filtered = filtered.filter(r => r.riskProfile === filterProfile);
+    }
+    if (filterHasLimit === 'yes') {
+      filtered = filtered.filter(r => (r.cleanOpRisk.limit || 0) > 0 || (r.creditOpRisk.limit || 0) > 0 || (r.indirectLosses.limit || 0) > 0);
+    } else if (filterHasLimit === 'no') {
+      filtered = filtered.filter(r => !r.cleanOpRisk.limit && !r.creditOpRisk.limit && !r.indirectLosses.limit);
     }
     if (selectedProcessFilter) {
       filtered = filtered.filter(r => r.process === selectedProcessFilter);
     }
     return filtered;
-  }, [risks, showTasksOnly, showHighRiskOnly, selectedSubdivision, selectedProcessFilter]);
+  }, [risks, registryMode, activeActionChip, showHighRiskOnly, searchQuery, selectedSubdivision, filterStatus, filterRiskLevels, filterStrategy, filterProfile, filterHasLimit, selectedProcessFilter]);
 
   const riskLevelPriority: Record<string, number> = { 'Низкий': 0, 'Средний': 1, 'Высокий': 2, 'Критичный': 3 };
 
@@ -337,13 +398,27 @@ const Index = () => {
   }).length;
 
   const awaitingApprovalCount = risks.filter(r => r.status === 'На согласовании').length;
-  const tasksCount = risks.filter(r => r.status === 'В работе' || r.status === 'На согласовании').length;
-  const highRiskCount = risks.filter(r => r.riskLevel === 'Высокий').length;
 
   const fmtMln = (v: number) => `${v.toLocaleString('ru-RU')} млн руб.`;
 
-  // Advanced filter state
-  const hasAdvancedFilters = selectedSubdivision !== 'all' || selectedPeriod !== '2026';
+  const hasAdvancedFilters = selectedSubdivision !== 'all' || filterStatus !== 'all' || filterRiskLevels.length > 0 || filterStrategy !== 'all' || filterProfile !== 'all' || filterHasLimit !== 'all' || filterHasMeasures !== 'all';
+
+  const uniqueProfiles = useMemo(() => [...new Set(risks.map(r => r.riskProfile))], [risks]);
+  const uniqueStrategies = useMemo(() => [...new Set(risks.map(r => r.responseStrategy))], [risks]);
+
+  const resetAdvancedFilters = () => {
+    setSelectedSubdivision('all');
+    setFilterStatus('all');
+    setFilterRiskLevels([]);
+    setFilterStrategy('all');
+    setFilterProfile('all');
+    setFilterHasMeasures('all');
+    setFilterHasLimit('all');
+  };
+
+  const toggleRiskLevel = (level: string) => {
+    setFilterRiskLevels(prev => prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]);
+  };
 
   return (
     <MainLayout>
@@ -444,125 +519,115 @@ const Index = () => {
               />
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-3 pb-2 border-b border-border">
-              {/* Left: mode toggles */}
+            {/* === CONTROL BAR — Line 1 === */}
+            <div className="flex items-center gap-2 h-11">
+              {/* Segment control */}
               <ToggleGroup
                 type="single"
-                value={pageMode}
-                onValueChange={(val) => { if (val) setPageMode(val as PageMode); }}
+                value={registryMode}
+                onValueChange={(val) => {
+                  if (val) {
+                    setRegistryMode(val as RegistryMode);
+                    if (val !== 'actions') setActiveActionChip(null);
+                  }
+                }}
               >
-                <ToggleGroupItem value="all" className="gap-1.5 px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  Все
+                <ToggleGroupItem value="registry" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Реестр
                 </ToggleGroupItem>
-                <ToggleGroupItem value="my-events" className="gap-1.5 px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  <Users className="w-3.5 h-3.5" />
-                  Мои события
+                <ToggleGroupItem value="actions" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Требуют действий
                 </ToggleGroupItem>
-                <ToggleGroupItem value="mirroring" className="gap-1.5 px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  <RefreshCw className="w-3.5 h-3.5" />
+                <ToggleGroupItem value="mirroring" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                   Зеркалирование
                 </ToggleGroupItem>
               </ToggleGroup>
 
-              <div className="h-6 w-px bg-border" />
-
-              {/* Quick status filters */}
-              <ToggleGroup
-                type="single"
-                value={showTasksOnly ? 'tasks' : (showHighRiskOnly ? 'high' : '')}
-                onValueChange={(val) => {
-                  setShowTasksOnly(val === 'tasks');
-                  setShowHighRiskOnly(val === 'high');
-                }}
-              >
-                <ToggleGroupItem value="tasks" className="gap-1.5 px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  <ListTodo className="w-3.5 h-3.5" />
-                  Задачи
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-md bg-background/20 font-medium">{tasksCount}</span>
-                </ToggleGroupItem>
-                <ToggleGroupItem value="high" className="gap-1.5 px-3 data-[state=on]:bg-destructive/15 data-[state=on]:text-destructive">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  Высокий уровень
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-md bg-background/20 font-medium">{highRiskCount}</span>
-                </ToggleGroupItem>
-              </ToggleGroup>
-
-              <div className="h-6 w-px bg-border" />
-
-              {/* Advanced filters */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <SlidersHorizontal className="w-3.5 h-3.5" />
-                    Фильтры
-                    {hasAdvancedFilters && (
-                      <span className="w-2 h-2 rounded-full bg-primary" />
+              {/* Search — expandable */}
+              <div className="flex items-center">
+                {searchOpen ? (
+                  <div className="flex items-center gap-1">
+                    <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <Input
+                      ref={searchInputRef}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onBlur={() => { if (!searchQuery.trim()) setSearchOpen(false); }}
+                      placeholder="Поиск..."
+                      className="h-8 w-48 text-sm"
+                      autoFocus
+                    />
+                    {searchQuery && (
+                      <button onClick={() => { setSearchQuery(''); searchInputRef.current?.focus(); }} className="p-1 rounded hover:bg-muted">
+                        <X className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
                     )}
+                  </div>
+                ) : (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSearchOpen(true)}>
+                    <Search className="w-4 h-4" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 space-y-4" align="start">
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">Подразделение</label>
-                    <Select value={selectedSubdivision} onValueChange={setSelectedSubdivision}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Подразделение" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Все подразделения</SelectItem>
-                        {subdivisions.map(sub => (
-                          <SelectItem key={sub} value={sub}>{sub}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">Год</label>
-                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Период" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2024">2024</SelectItem>
-                        <SelectItem value="2025">2025</SelectItem>
-                        <SelectItem value="2026">2026</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {hasAdvancedFilters && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setSelectedSubdivision('all');
-                        setSelectedPeriod('2026');
-                      }}
-                    >
-                      Сбросить фильтры
-                    </Button>
-                  )}
-                </PopoverContent>
-              </Popover>
+                )}
+              </div>
+
+              <div className="h-6 w-px bg-border" />
+
+              {/* Quick filter: Высокие */}
+              <Button
+                variant={showHighRiskOnly ? 'default' : 'outline'}
+                size="sm"
+                className={cn("gap-1.5 h-8", showHighRiskOnly && "bg-destructive text-destructive-foreground hover:bg-destructive/90")}
+                onClick={() => setShowHighRiskOnly(!showHighRiskOnly)}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Высокие
+              </Button>
+
+              {/* Filter drawer trigger */}
+              <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => setFilterDrawerOpen(true)}>
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Фильтр
+                {hasAdvancedFilters && <span className="w-2 h-2 rounded-full bg-primary" />}
+              </Button>
 
               <div className="flex-1" />
 
-              {/* Right: view switcher */}
+              {/* View switcher */}
               <ToggleGroup
                 type="single"
                 value={viewMode}
                 onValueChange={(val) => { if (val) setViewMode(val as ViewMode); }}
               >
-                <ToggleGroupItem value="list" className="gap-1.5 px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                <ToggleGroupItem value="list" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                   <LayoutList className="w-3.5 h-3.5" />
                   Риски
                 </ToggleGroupItem>
-                <ToggleGroupItem value="processes" className="gap-1.5 px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                <ToggleGroupItem value="processes" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                   <FolderKanban className="w-3.5 h-3.5" />
                   Процессы
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
+
+            {/* === CONTROL BAR — Line 2 (only in "Требуют действий") === */}
+            {registryMode === 'actions' && (
+              <div className="flex items-center gap-2 h-9">
+                {(['evaluate', 'approve', 'correct'] as ActionChip[]).map((chip) => {
+                  const labels: Record<ActionChip, string> = { evaluate: 'Оценить', approve: 'Согласовать', correct: 'Скорректировать' };
+                  return (
+                    <Button
+                      key={chip}
+                      variant={activeActionChip === chip ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => setActiveActionChip(activeActionChip === chip ? null : chip)}
+                    >
+                      {labels[chip]}
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Active process filter chip */}
             {selectedProcessFilter && (
@@ -695,6 +760,102 @@ const Index = () => {
         onEdit={(risk) => handleOpenWizardEdit(risk)}
         onOpenWizard={handleOpenWizardEdit}
       />
+
+      {/* Filter Drawer */}
+      <Sheet open={filterDrawerOpen} onOpenChange={setFilterDrawerOpen}>
+        <SheetContent side="right" className="w-[360px] sm:max-w-[360px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Фильтр реестра рисков</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-5 mt-6">
+            {/* Подразделение */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Подразделение</Label>
+              <Select value={selectedSubdivision} onValueChange={setSelectedSubdivision}>
+                <SelectTrigger><SelectValue placeholder="Все подразделения" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все подразделения</SelectItem>
+                  {subdivisions.map(sub => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Статус */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Статус</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger><SelectValue placeholder="Все статусы" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  <SelectItem value="Утверждён">Утверждён</SelectItem>
+                  <SelectItem value="В работе">В работе</SelectItem>
+                  <SelectItem value="На согласовании">На согласовании</SelectItem>
+                  <SelectItem value="Черновик">Черновик</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Уровень риска */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Уровень риска</Label>
+              <div className="flex flex-col gap-2">
+                {['Высокий', 'Средний', 'Низкий'].map(level => (
+                  <label key={level} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={filterRiskLevels.includes(level)}
+                      onCheckedChange={() => toggleRiskLevel(level)}
+                    />
+                    {level}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Стратегия реагирования */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Стратегия реагирования</Label>
+              <Select value={filterStrategy} onValueChange={setFilterStrategy}>
+                <SelectTrigger><SelectValue placeholder="Все" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все</SelectItem>
+                  {uniqueStrategies.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Профиль риска */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Профиль риска (ЦПР)</Label>
+              <Select value={filterProfile} onValueChange={setFilterProfile}>
+                <SelectTrigger><SelectValue placeholder="Все" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все</SelectItem>
+                  {uniqueProfiles.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Риски с лимитом */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Риски с лимитом</Label>
+              <Select value={filterHasLimit} onValueChange={setFilterHasLimit}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все</SelectItem>
+                  <SelectItem value="yes">Да</SelectItem>
+                  <SelectItem value="no">Нет</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2 pt-2">
+              <Button className="flex-1" onClick={() => setFilterDrawerOpen(false)}>Применить</Button>
+              <Button variant="outline" className="flex-1" onClick={resetAdvancedFilters}>Сбросить</Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </MainLayout>
   );
 };
