@@ -5,12 +5,9 @@ import { cn } from '@/lib/utils';
 interface MetricCardProps {
   title: string;
   value: string;
-  subValue?: string;
   utilization: number;
   showDonut?: boolean;
-  // Expandable details
   detailRows?: { label: string; value: string }[];
-  // Sync expand state externally
   isExpanded?: boolean;
   onToggleExpand?: () => void;
 }
@@ -18,7 +15,6 @@ interface MetricCardProps {
 export function MetricCard({ 
   title, 
   value, 
-  subValue, 
   utilization, 
   showDonut = true,
   detailRows,
@@ -47,15 +43,12 @@ export function MetricCard({
   const hasDetails = detailRows && detailRows.length > 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card flex flex-col">
-      <div className="p-5">
+    <div className="rounded-xl border border-border bg-card flex flex-col h-full">
+      <div className="p-5 flex-1">
         <div className="flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-xs font-medium text-muted-foreground mb-1.5 truncate">{title}</h3>
             <p className="text-lg font-semibold text-foreground">{value}</p>
-            {subValue && (
-              <p className="text-xs text-muted-foreground mt-0.5">{subValue}</p>
-            )}
           </div>
           
           {showDonut && (

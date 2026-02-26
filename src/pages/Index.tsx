@@ -396,7 +396,6 @@ const Index = () => {
               <MetricCard
                 title="Чистые"
                 value={fmtMln(aggregates.cleanOpRisk.total)}
-                subValue={`из ${fmtMln(aggregates.cleanOpRisk.limit)}`}
                 utilization={aggregates.cleanOpRisk.utilization}
                 isExpanded={widgetsExpanded}
                 onToggleExpand={() => setWidgetsExpanded(!widgetsExpanded)}
@@ -409,7 +408,6 @@ const Index = () => {
               <MetricCard
                 title="Кредитные"
                 value={fmtMln(aggregates.creditOpRisk.total)}
-                subValue={`из ${fmtMln(aggregates.creditOpRisk.limit)}`}
                 utilization={aggregates.creditOpRisk.utilization}
                 isExpanded={widgetsExpanded}
                 onToggleExpand={() => setWidgetsExpanded(!widgetsExpanded)}
@@ -422,7 +420,6 @@ const Index = () => {
               <MetricCard
                 title="Косвенные"
                 value={fmtMln(aggregates.indirectLosses.total)}
-                subValue={`из ${fmtMln(aggregates.indirectLosses.limit)}`}
                 utilization={aggregates.indirectLosses.utilization}
                 isExpanded={widgetsExpanded}
                 onToggleExpand={() => setWidgetsExpanded(!widgetsExpanded)}
