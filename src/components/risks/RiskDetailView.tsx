@@ -50,6 +50,7 @@ const sections = [
   { id: 'utilization', label: 'Утилизация' },
   { id: 'potential', label: 'Потенциальные потери' },
   { id: 'scenarios', label: 'Сценарии' },
+  { id: 'mirroring', label: 'Зеркалирование' },
   { id: 'connections', label: 'Связи' },
 ];
 
@@ -312,6 +313,39 @@ export function RiskDetailView({ risk, isOpen, onClose, onEdit, onOpenWizard }: 
                 <p className="text-muted-foreground text-sm">Сценарии не добавлены</p>
               )}
             </section>
+
+            {/* Mirroring */}
+            {risk.mirrors.length > 0 && (
+              <section id="mirroring" className="space-y-3">
+                <h2 className="text-base font-semibold">Зеркалирование</h2>
+                <div className="space-y-3">
+                  {risk.mirrors.map((mirror) => {
+                    const mClean = Math.round((risk.cleanOpRisk.value || 0) * mirror.percentage / 100 * 10) / 10;
+                    const mCleanLimit = Math.round((risk.cleanOpRisk.limit || 0) * mirror.percentage / 100 * 10) / 10;
+                    const mCleanPct = mCleanLimit > 0 ? Math.round(mClean / mCleanLimit * 100) : 0;
+
+                    const mCredit = Math.round((risk.creditOpRisk.value || 0) * mirror.percentage / 100 * 10) / 10;
+                    const mCreditLimit = Math.round((risk.creditOpRisk.limit || 0) * mirror.percentage / 100 * 10) / 10;
+                    const mCreditPct = mCreditLimit > 0 ? Math.round(mCredit / mCreditLimit * 100) : 0;
+
+                    const mIndirect = Math.round((risk.indirectLosses.value || 0) * mirror.percentage / 100 * 10) / 10;
+                    const mIndirectLimit = Math.round((risk.indirectLosses.limit || 0) * mirror.percentage / 100 * 10) / 10;
+                    const mIndirectPct = mIndirectLimit > 0 ? Math.round(mIndirect / mIndirectLimit * 100) : 0;
+
+                    return (
+                      <div key={mirror.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
+                        <p className="text-sm font-medium">{mirror.subdivision}</p>
+                        <div className="flex items-center gap-5 text-sm flex-wrap">
+                          <span className="text-muted-foreground">Чистые: <span className="font-medium text-foreground">{mClean} млн</span> <span className={cn("text-xs font-medium", mCleanPct > 100 ? "text-destructive" : "text-muted-foreground")}>{mCleanPct}%</span></span>
+                          <span className="text-muted-foreground">Кредитные: <span className="font-medium text-foreground">{mCredit} млн</span> <span className={cn("text-xs font-medium", mCreditPct > 100 ? "text-destructive" : "text-muted-foreground")}>{mCreditPct}%</span></span>
+                          <span className="text-muted-foreground">Косвенные: <span className="font-medium text-foreground">{mIndirect} млн</span> <span className={cn("text-xs font-medium", mIndirectPct > 100 ? "text-destructive" : "text-muted-foreground")}>{mIndirectPct}%</span></span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* Connections */}
             <section id="connections" className="space-y-4">
