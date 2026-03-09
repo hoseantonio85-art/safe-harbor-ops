@@ -645,10 +645,25 @@ const Index = () => {
               </div>
             )}
 
+            {/* Matrix heat map (shown in matrix mode, above the list) */}
+            {viewMode === 'matrix' && (
+              <RiskHeatMap
+                risks={filteredRisks}
+                selectedCell={matrixSelectedCell}
+                onCellSelect={setMatrixSelectedCell}
+              />
+            )}
+
             {/* Risk List or Process Cards */}
-            {viewMode === 'list' ? (
+            {(viewMode === 'list' || viewMode === 'matrix') ? (
               <div className="space-y-2">
-                {filteredRisks.map((risk) => (
+                {(viewMode === 'matrix' && matrixSelectedCell
+                  ? filteredRisks.filter(r =>
+                      getRiskProbability(r) === matrixSelectedCell.probability &&
+                      getRiskDamage(r) === matrixSelectedCell.damage
+                    )
+                  : filteredRisks
+                ).map((risk) => (
                   <RiskRow
                     key={risk.id}
                     risk={risk}
