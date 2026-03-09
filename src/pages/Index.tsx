@@ -28,8 +28,9 @@ import { Label } from '@/components/ui/label';
 import { mockRisks } from '@/data/mockRisks';
 import { Risk } from '@/types/risk';
 import { cn } from '@/lib/utils';
+import { RiskHeatMap, getRiskProbability, getRiskDamage, type SelectedCell } from '@/components/risks/RiskHeatMap';
 
-type ViewMode = 'list' | 'processes';
+type ViewMode = 'list' | 'processes' | 'matrix';
 type ScreenMode = 'view' | 'edit';
 type RegistryMode = 'registry' | 'actions' | 'mirroring';
 type ActionChip = 'evaluate' | 'approve' | 'correct';
