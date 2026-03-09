@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { Plus, Pencil, Save, Send, X, CheckSquare, LayoutList, FolderKanban, SlidersHorizontal, Search } from 'lucide-react';
+import { Plus, Pencil, Save, Send, X, CheckSquare, LayoutList, FolderKanban, SlidersHorizontal, Search, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/risks/MetricCard';
@@ -28,8 +28,9 @@ import { Label } from '@/components/ui/label';
 import { mockRisks } from '@/data/mockRisks';
 import { Risk } from '@/types/risk';
 import { cn } from '@/lib/utils';
+import { RiskHeatMap, getRiskProbability, getRiskDamage, type SelectedCell } from '@/components/risks/RiskHeatMap';
 
-type ViewMode = 'list' | 'processes';
+type ViewMode = 'list' | 'processes' | 'matrix';
 type ScreenMode = 'view' | 'edit';
 type RegistryMode = 'registry' | 'actions' | 'mirroring';
 type ActionChip = 'evaluate' | 'approve' | 'correct';
@@ -77,6 +78,7 @@ const Index = () => {
   const [filterHasLimit, setFilterHasLimit] = useState<string>('all');
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [matrixSelectedCell, setMatrixSelectedCell] = useState<SelectedCell | null>(null);
 
   // Widget expand state — synchronized across all 4
   const [widgetsExpanded, setWidgetsExpanded] = useState(false);
@@ -586,7 +588,12 @@ const Index = () => {
               <ToggleGroup
                 type="single"
                 value={viewMode}
-                onValueChange={(val) => { if (val) setViewMode(val as ViewMode); }}
+                onValueChange={(val) => {
+                  if (val) {
+                    setViewMode(val as ViewMode);
+                    if (val !== 'matrix') setMatrixSelectedCell(null);
+                  }
+                }}
               >
                 <ToggleGroupItem value="list" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                   <LayoutList className="w-3.5 h-3.5" />
@@ -595,6 +602,10 @@ const Index = () => {
                 <ToggleGroupItem value="processes" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                   <FolderKanban className="w-3.5 h-3.5" />
                   Процессы
+                </ToggleGroupItem>
+                <ToggleGroupItem value="matrix" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  <Grid3X3 className="w-3.5 h-3.5" />
+                  Матрица
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
@@ -634,10 +645,25 @@ const Index = () => {
               </div>
             )}
 
+            {/* Matrix heat map (shown in matrix mode, above the list) */}
+            {viewMode === 'matrix' && (
+              <RiskHeatMap
+                risks={filteredRisks}
+                selectedCell={matrixSelectedCell}
+                onCellSelect={setMatrixSelectedCell}
+              />
+            )}
+
             {/* Risk List or Process Cards */}
-            {viewMode === 'list' ? (
+            {(viewMode === 'list' || viewMode === 'matrix') ? (
               <div className="space-y-2">
-                {filteredRisks.map((risk) => (
+                {(viewMode === 'matrix' && matrixSelectedCell
+                  ? filteredRisks.filter(r =>
+                      getRiskProbability(r) === matrixSelectedCell.probability &&
+                      getRiskDamage(r) === matrixSelectedCell.damage
+                    )
+                  : filteredRisks
+                ).map((risk) => (
                   <RiskRow
                     key={risk.id}
                     risk={risk}
