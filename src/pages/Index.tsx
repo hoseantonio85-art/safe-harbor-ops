@@ -588,7 +588,12 @@ const Index = () => {
               <ToggleGroup
                 type="single"
                 value={viewMode}
-                onValueChange={(val) => { if (val) setViewMode(val as ViewMode); }}
+                onValueChange={(val) => {
+                  if (val) {
+                    setViewMode(val as ViewMode);
+                    if (val !== 'matrix') setMatrixSelectedCell(null);
+                  }
+                }}
               >
                 <ToggleGroupItem value="list" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                   <LayoutList className="w-3.5 h-3.5" />
@@ -597,6 +602,10 @@ const Index = () => {
                 <ToggleGroupItem value="processes" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                   <FolderKanban className="w-3.5 h-3.5" />
                   Процессы
+                </ToggleGroupItem>
+                <ToggleGroupItem value="matrix" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  <Grid3X3 className="w-3.5 h-3.5" />
+                  Матрица
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
