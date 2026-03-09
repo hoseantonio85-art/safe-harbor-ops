@@ -78,6 +78,7 @@ const Index = () => {
   const [filterHasLimit, setFilterHasLimit] = useState<string>('all');
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [matrixSelectedCell, setMatrixSelectedCell] = useState<SelectedCell | null>(null);
 
   // Widget expand state — synchronized across all 4
   const [widgetsExpanded, setWidgetsExpanded] = useState(false);
