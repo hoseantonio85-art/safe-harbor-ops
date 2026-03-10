@@ -587,30 +587,35 @@ const Index = () => {
               <div className="flex-1" />
 
               {/* View switcher */}
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(val) => {
-                  if (val) {
-                    setViewMode(val as ViewMode);
-                    setMatrixSelectedCell(null);
-                    setMatrixDrillDown(false);
-                  }
-                }}
-              >
-                <ToggleGroupItem value="list" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  <LayoutList className="w-3.5 h-3.5" />
-                  Риски
-                </ToggleGroupItem>
-                <ToggleGroupItem value="processes" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  <FolderKanban className="w-3.5 h-3.5" />
-                  Процессы
-                </ToggleGroupItem>
-                <ToggleGroupItem value="matrix" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+              <div className="flex items-center gap-1">
+                <ToggleGroup
+                  type="single"
+                  value={viewMode}
+                  onValueChange={(val) => {
+                    if (val) {
+                      setViewMode(val as ViewMode);
+                    }
+                  }}
+                >
+                  <ToggleGroupItem value="list" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    <LayoutList className="w-3.5 h-3.5" />
+                    Риски
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="processes" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    <FolderKanban className="w-3.5 h-3.5" />
+                    Процессы
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-9 px-3 text-sm"
+                  onClick={() => { setMatrixModalOpen(true); setMatrixSelectedCell(null); }}
+                >
                   <Grid3X3 className="w-3.5 h-3.5" />
                   Матрица
-                </ToggleGroupItem>
-              </ToggleGroup>
+                </Button>
+              </div>
             </div>
 
             {/* === CONTROL BAR — Line 2 (only in "Требуют действий") === */}
