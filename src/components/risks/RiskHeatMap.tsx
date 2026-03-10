@@ -126,7 +126,7 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect, compact }: Risk
 
           <div className="flex-1">
             {/* Grid */}
-            <div className="grid gap-1" style={{ gridTemplateColumns: `80px repeat(${DAMAGE_LABELS.length}, 1fr)` }}>
+            <div className={cn("grid", compact ? "gap-0.5" : "gap-1")} style={{ gridTemplateColumns: `80px repeat(${DAMAGE_LABELS.length}, 1fr)` }}>
               {/* Empty corner */}
               <div />
               {/* X-axis headers */}
