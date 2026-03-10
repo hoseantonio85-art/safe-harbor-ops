@@ -164,7 +164,8 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect, compact }: Risk
                             <button
                               onClick={() => onCellSelect(selected ? null : { probability: prob, damage: dmg })}
                               className={cn(
-                                "relative aspect-square rounded-md flex items-center justify-center text-sm font-semibold transition-all duration-150 border-2 min-h-[40px]",
+                                "relative rounded-md flex items-center justify-center font-semibold transition-all duration-150 border-2",
+                                compact ? "aspect-[4/3] text-xs min-h-[32px]" : "aspect-square text-sm min-h-[40px]",
                                 styles.bg,
                                 styles.bgHover,
                                 styles.text,
