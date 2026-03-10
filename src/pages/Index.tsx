@@ -684,7 +684,10 @@ const Index = () => {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : null}
+
+            {/* Process Cards */}
+            {viewMode === 'processes' && (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {processGroups.map((group) => (
                   <ProcessCard
