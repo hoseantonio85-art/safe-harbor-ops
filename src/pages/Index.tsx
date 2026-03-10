@@ -592,7 +592,8 @@ const Index = () => {
                 onValueChange={(val) => {
                   if (val) {
                     setViewMode(val as ViewMode);
-                    if (val !== 'matrix') setMatrixSelectedCell(null);
+                    setMatrixSelectedCell(null);
+                    setMatrixDrillDown(false);
                   }
                 }}
               >
