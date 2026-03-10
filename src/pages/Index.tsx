@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { Plus, Pencil, Save, Send, X, CheckSquare, LayoutList, FolderKanban, SlidersHorizontal, Search, Grid3X3 } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/risks/MetricCard';
