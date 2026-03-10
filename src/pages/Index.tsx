@@ -653,19 +653,25 @@ const Index = () => {
               </div>
             )}
 
-            {/* Matrix heat map (shown in matrix mode, above the list) */}
-            {viewMode === 'matrix' && (
-              <RiskHeatMap
-                risks={filteredRisks}
-                selectedCell={matrixSelectedCell}
-                onCellSelect={setMatrixSelectedCell}
-              />
+            {/* Matrix filter indicator */}
+            {matrixSelectedCell && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="gap-1.5 pr-1">
+                  Матрица: {matrixSelectedCell.probability} вероятность × {matrixSelectedCell.damage} ущерб
+                  <button
+                    onClick={() => setMatrixSelectedCell(null)}
+                    className="ml-1 p-0.5 rounded-full hover:bg-foreground/10 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              </div>
             )}
 
-            {/* Risk List or Process Cards */}
-            {(viewMode === 'list' || viewMode === 'matrix') ? (
+            {/* Risk List */}
+            {viewMode === 'list' ? (
               <div className="space-y-2">
-                {(viewMode === 'matrix' && matrixSelectedCell
+                {(matrixSelectedCell
                   ? filteredRisks.filter(r =>
                       getRiskProbability(r) === matrixSelectedCell.probability &&
                       getRiskDamage(r) === matrixSelectedCell.damage
