@@ -794,6 +794,31 @@ const Index = () => {
         onOpenWizard={handleOpenWizardEdit}
       />
 
+      {/* Matrix Modal */}
+      <Dialog open={matrixModalOpen} onOpenChange={setMatrixModalOpen}>
+        <DialogContent className="max-w-4xl w-[90vw] h-[85vh] flex flex-col p-0 gap-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+            <DialogTitle className="text-lg font-semibold">Матрица рисков</DialogTitle>
+          </div>
+          <div className="flex-1 overflow-auto px-6 py-6 flex items-center justify-center">
+            <div className="w-full max-w-3xl">
+              <RiskHeatMap
+                risks={filteredRisks}
+                selectedCell={matrixSelectedCell}
+                onCellSelect={(cell) => {
+                  if (cell) {
+                    setMatrixSelectedCell(cell);
+                    setMatrixModalOpen(false);
+                    setViewMode('list');
+                  }
+                }}
+                compact
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Filter Drawer */}
       <Sheet open={filterDrawerOpen} onOpenChange={setFilterDrawerOpen}>
         <SheetContent side="right" className="w-[360px] sm:max-w-[360px] overflow-y-auto">
