@@ -80,7 +80,7 @@ const Index = () => {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [matrixSelectedCell, setMatrixSelectedCell] = useState<SelectedCell | null>(null);
-  const [matrixDrillDown, setMatrixDrillDown] = useState(false);
+  const [matrixModalOpen, setMatrixModalOpen] = useState(false);
 
   // Widget expand state — synchronized across all 4
   const [widgetsExpanded, setWidgetsExpanded] = useState(false);
