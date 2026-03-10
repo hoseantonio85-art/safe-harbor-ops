@@ -31,7 +31,7 @@ import { Risk } from '@/types/risk';
 import { cn } from '@/lib/utils';
 import { RiskHeatMap, getRiskProbability, getRiskDamage, type SelectedCell } from '@/components/risks/RiskHeatMap';
 
-type ViewMode = 'list' | 'processes' | 'matrix';
+type ViewMode = 'list' | 'processes';
 type ScreenMode = 'view' | 'edit';
 type RegistryMode = 'registry' | 'actions' | 'mirroring';
 type ActionChip = 'evaluate' | 'approve' | 'correct';
