@@ -76,9 +76,10 @@ interface RiskHeatMapProps {
   risks: Risk[];
   selectedCell: SelectedCell | null;
   onCellSelect: (cell: SelectedCell | null) => void;
+  compact?: boolean;
 }
 
-export function RiskHeatMap({ risks, selectedCell, onCellSelect }: RiskHeatMapProps) {
+export function RiskHeatMap({ risks, selectedCell, onCellSelect, compact }: RiskHeatMapProps) {
   // Build matrix data
   const matrix = new Map<string, Risk[]>();
   risks.forEach(risk => {
