@@ -76,9 +76,10 @@ interface RiskHeatMapProps {
   risks: Risk[];
   selectedCell: SelectedCell | null;
   onCellSelect: (cell: SelectedCell | null) => void;
+  compact?: boolean;
 }
 
-export function RiskHeatMap({ risks, selectedCell, onCellSelect }: RiskHeatMapProps) {
+export function RiskHeatMap({ risks, selectedCell, onCellSelect, compact }: RiskHeatMapProps) {
   // Build matrix data
   const matrix = new Map<string, Risk[]>();
   risks.forEach(risk => {
@@ -95,10 +96,10 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect }: RiskHeatMapPr
   const hasSelection = selectedCell !== null;
 
   return (
-    <div className="space-y-3">
+    <div className={compact ? "space-y-2" : "space-y-3"}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Матрица рисков</h3>
-        {selectedCell && (
+        {selectedCell && !compact && (
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-xs gap-1.5 pr-1">
               Матрица: {selectedCell.probability} вероятность × {selectedCell.damage} ущерб
@@ -113,7 +114,7 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect }: RiskHeatMapPr
         )}
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
+      <div className={cn("rounded-lg border border-border bg-card", compact ? "p-3" : "p-4")}>
         <div className="flex">
           {/* Y-axis label */}
           <div className="flex items-center mr-2">
@@ -125,7 +126,7 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect }: RiskHeatMapPr
 
           <div className="flex-1">
             {/* Grid */}
-            <div className="grid gap-1" style={{ gridTemplateColumns: `80px repeat(${DAMAGE_LABELS.length}, 1fr)` }}>
+            <div className={cn("grid", compact ? "gap-0.5" : "gap-1")} style={{ gridTemplateColumns: `80px repeat(${DAMAGE_LABELS.length}, 1fr)` }}>
               {/* Empty corner */}
               <div />
               {/* X-axis headers */}
@@ -163,7 +164,8 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect }: RiskHeatMapPr
                             <button
                               onClick={() => onCellSelect(selected ? null : { probability: prob, damage: dmg })}
                               className={cn(
-                                "relative aspect-square rounded-md flex items-center justify-center text-sm font-semibold transition-all duration-150 border-2 min-h-[40px]",
+                                "relative rounded-md flex items-center justify-center font-semibold transition-all duration-150 border-2",
+                                compact ? "aspect-[4/3] text-xs min-h-[32px]" : "aspect-square text-sm min-h-[40px]",
                                 styles.bg,
                                 styles.bgHover,
                                 styles.text,

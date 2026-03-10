@@ -79,6 +79,7 @@ const Index = () => {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [matrixSelectedCell, setMatrixSelectedCell] = useState<SelectedCell | null>(null);
+  const [matrixDrillDown, setMatrixDrillDown] = useState(false);
 
   // Widget expand state — synchronized across all 4
   const [widgetsExpanded, setWidgetsExpanded] = useState(false);
@@ -591,7 +592,8 @@ const Index = () => {
                 onValueChange={(val) => {
                   if (val) {
                     setViewMode(val as ViewMode);
-                    if (val !== 'matrix') setMatrixSelectedCell(null);
+                    setMatrixSelectedCell(null);
+                    setMatrixDrillDown(false);
                   }
                 }}
               >
@@ -682,7 +684,10 @@ const Index = () => {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : null}
+
+            {/* Process Cards */}
+            {viewMode === 'processes' && (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {processGroups.map((group) => (
                   <ProcessCard
