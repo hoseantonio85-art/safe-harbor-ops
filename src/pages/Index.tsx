@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { Plus, Pencil, Save, Send, X, CheckSquare, LayoutList, FolderKanban, SlidersHorizontal, Search, Grid3X3 } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { MetricCard } from '@/components/risks/MetricCard';
@@ -30,7 +31,7 @@ import { Risk } from '@/types/risk';
 import { cn } from '@/lib/utils';
 import { RiskHeatMap, getRiskProbability, getRiskDamage, type SelectedCell } from '@/components/risks/RiskHeatMap';
 
-type ViewMode = 'list' | 'processes' | 'matrix';
+type ViewMode = 'list' | 'processes';
 type ScreenMode = 'view' | 'edit';
 type RegistryMode = 'registry' | 'actions' | 'mirroring';
 type ActionChip = 'evaluate' | 'approve' | 'correct';
@@ -79,7 +80,7 @@ const Index = () => {
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [matrixSelectedCell, setMatrixSelectedCell] = useState<SelectedCell | null>(null);
-  const [matrixDrillDown, setMatrixDrillDown] = useState(false);
+  const [matrixModalOpen, setMatrixModalOpen] = useState(false);
 
   // Widget expand state — synchronized across all 4
   const [widgetsExpanded, setWidgetsExpanded] = useState(false);
@@ -586,30 +587,35 @@ const Index = () => {
               <div className="flex-1" />
 
               {/* View switcher */}
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(val) => {
-                  if (val) {
-                    setViewMode(val as ViewMode);
-                    setMatrixSelectedCell(null);
-                    setMatrixDrillDown(false);
-                  }
-                }}
-              >
-                <ToggleGroupItem value="list" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  <LayoutList className="w-3.5 h-3.5" />
-                  Риски
-                </ToggleGroupItem>
-                <ToggleGroupItem value="processes" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                  <FolderKanban className="w-3.5 h-3.5" />
-                  Процессы
-                </ToggleGroupItem>
-                <ToggleGroupItem value="matrix" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+              <div className="flex items-center gap-1">
+                <ToggleGroup
+                  type="single"
+                  value={viewMode}
+                  onValueChange={(val) => {
+                    if (val) {
+                      setViewMode(val as ViewMode);
+                    }
+                  }}
+                >
+                  <ToggleGroupItem value="list" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    <LayoutList className="w-3.5 h-3.5" />
+                    Риски
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="processes" className="gap-1.5 px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    <FolderKanban className="w-3.5 h-3.5" />
+                    Процессы
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-9 px-3 text-sm"
+                  onClick={() => { setMatrixModalOpen(true); setMatrixSelectedCell(null); }}
+                >
                   <Grid3X3 className="w-3.5 h-3.5" />
                   Матрица
-                </ToggleGroupItem>
-              </ToggleGroup>
+                </Button>
+              </div>
             </div>
 
             {/* === CONTROL BAR — Line 2 (only in "Требуют действий") === */}
@@ -647,19 +653,25 @@ const Index = () => {
               </div>
             )}
 
-            {/* Matrix heat map (shown in matrix mode, above the list) */}
-            {viewMode === 'matrix' && (
-              <RiskHeatMap
-                risks={filteredRisks}
-                selectedCell={matrixSelectedCell}
-                onCellSelect={setMatrixSelectedCell}
-              />
+            {/* Matrix filter indicator */}
+            {matrixSelectedCell && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="gap-1.5 pr-1">
+                  Матрица: {matrixSelectedCell.probability} вероятность × {matrixSelectedCell.damage} ущерб
+                  <button
+                    onClick={() => setMatrixSelectedCell(null)}
+                    className="ml-1 p-0.5 rounded-full hover:bg-foreground/10 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              </div>
             )}
 
-            {/* Risk List or Process Cards */}
-            {(viewMode === 'list' || viewMode === 'matrix') ? (
+            {/* Risk List */}
+            {viewMode === 'list' ? (
               <div className="space-y-2">
-                {(viewMode === 'matrix' && matrixSelectedCell
+                {(matrixSelectedCell
                   ? filteredRisks.filter(r =>
                       getRiskProbability(r) === matrixSelectedCell.probability &&
                       getRiskDamage(r) === matrixSelectedCell.damage
@@ -781,6 +793,31 @@ const Index = () => {
         onEdit={(risk) => handleOpenWizardEdit(risk)}
         onOpenWizard={handleOpenWizardEdit}
       />
+
+      {/* Matrix Modal */}
+      <Dialog open={matrixModalOpen} onOpenChange={setMatrixModalOpen}>
+        <DialogContent className="max-w-4xl w-[90vw] h-[85vh] flex flex-col p-0 gap-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+            <DialogTitle className="text-lg font-semibold">Матрица рисков</DialogTitle>
+          </div>
+          <div className="flex-1 overflow-auto px-6 py-6 flex items-center justify-center">
+            <div className="w-full max-w-3xl">
+              <RiskHeatMap
+                risks={filteredRisks}
+                selectedCell={matrixSelectedCell}
+                onCellSelect={(cell) => {
+                  if (cell) {
+                    setMatrixSelectedCell(cell);
+                    setMatrixModalOpen(false);
+                    setViewMode('list');
+                  }
+                }}
+                compact
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Filter Drawer */}
       <Sheet open={filterDrawerOpen} onOpenChange={setFilterDrawerOpen}>
