@@ -96,10 +96,10 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect, compact }: Risk
   const hasSelection = selectedCell !== null;
 
   return (
-    <div className="space-y-3">
+    <div className={compact ? "space-y-2" : "space-y-3"}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Матрица рисков</h3>
-        {selectedCell && (
+        {selectedCell && !compact && (
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-xs gap-1.5 pr-1">
               Матрица: {selectedCell.probability} вероятность × {selectedCell.damage} ущерб
@@ -114,7 +114,7 @@ export function RiskHeatMap({ risks, selectedCell, onCellSelect, compact }: Risk
         )}
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
+      <div className={cn("rounded-lg border border-border bg-card", compact ? "p-3" : "p-4")}>
         <div className="flex">
           {/* Y-axis label */}
           <div className="flex items-center mr-2">
